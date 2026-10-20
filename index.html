@@ -1,0 +1,989 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="description" content="ระบบซ้อมสอบราชการ 6 วิชา โจทย์ใหม่ทุกชุด ความยากปรับตามผลคะแนน"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>ระบบซ้อมสอบ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600&family=Sarabun:wght@400;500;600&display=swap">
+<style>
+/* Layout: left rail (subjects + settings) beside one exam-sheet column; rail becomes a top strip on phones */
+:root{
+  --paper:#f3f5f8; --sheet:#ffffff; --rail:#e9edf4; --ink:#1c2538; --ink-2:#56607a; --line:#d9dee8;
+  --accent:#2f47b8; --accent-soft:#e6eafb;
+  --ok:#1f7a4d; --ok-soft:#e3f3ea; --bad:#b3322b; --bad-soft:#f9e5e3; --unk:#9a6206; --unk-soft:#fbf0dc;
+  --mark:#c47a12;
+  --f-display:"Anuphan","Sarabun",system-ui,sans-serif;
+  --f-body:"Sarabun",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#11151f; --sheet:#1a2030; --rail:#151a27; --ink:#e7ebf4; --ink-2:#a2abc2; --line:#2e3750;
+  --accent:#8fa2ff; --accent-soft:#252f52;
+  --ok:#6fd3a0; --ok-soft:#173527; --bad:#ff8f86; --bad-soft:#3a1c1b; --unk:#f0bf63; --unk-soft:#3a2c12;
+  --mark:#f0bf63; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#11151f; --sheet:#1a2030; --rail:#151a27; --ink:#e7ebf4; --ink-2:#a2abc2; --line:#2e3750;
+  --accent:#8fa2ff; --accent-soft:#252f52;
+  --ok:#6fd3a0; --ok-soft:#173527; --bad:#ff8f86; --bad-soft:#3a1c1b; --unk:#f0bf63; --unk-soft:#3a2c12;
+  --mark:#f0bf63; color-scheme:dark}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6}
+button,select,textarea{font-family:var(--f-body)}
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.side{background:var(--rail);border-right:1px solid var(--line);padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px;display:flex;flex-direction:column;gap:18px;position:sticky;top:env(safe-area-inset-top,0px);align-self:start;height:100vh;box-sizing:border-box;overflow-y:auto}
+.brand{font-family:var(--f-display);font-weight:600;font-size:1.35rem;margin:0}
+.brand small{display:block;font:400 13px var(--f-body);color:var(--ink-2)}
+.cap{font-size:12px;letter-spacing:.06em;color:var(--ink-2);margin:0 0 6px}
+nav.subjects{display:flex;flex-direction:column;gap:4px}
+.subj{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;font:500 15px var(--f-body);padding:9px 10px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--ink);cursor:pointer}
+.subj:hover{background:var(--sheet)}
+.subj[aria-current="true"]{background:var(--sheet);border-color:var(--accent);color:var(--accent)}
+.lv{font:600 12px var(--f-body);padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+.set{display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label,.field .fl{font-size:14px;color:var(--ink-2)}
+input.tx,select{font-size:15px;box-sizing:border-box;width:100%;padding:7px 8px;border-radius:8px;border:1px solid var(--line);background:var(--sheet);color:var(--ink)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{font:500 14px var(--f-body);padding:8px 4px;border:none;background:var(--sheet);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--sheet)}
+.aiset{border-top:1px solid var(--line);padding-top:12px}
+.aiset summary{cursor:pointer;font-weight:600;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+.aiset .bd{display:flex;flex-direction:column;gap:10px;padding-top:10px}
+.aiset .hint{font-size:13px;color:var(--ink-2);margin:0;line-height:1.5}
+.aiset .ok{color:var(--ok)} .aiset .err{color:var(--bad)}
+.aiset .btns{display:flex;gap:6px;flex-wrap:wrap}
+.klink{font-size:13px;color:var(--accent);text-decoration:none;align-self:flex-start}
+.klink:hover{text-decoration:underline}
+.howto{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--sheet)}
+.howto summary{cursor:pointer;font-size:14px;font-weight:600}
+.howto ol{margin:8px 0 4px;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.55}
+.howto a{color:var(--accent);overflow-wrap:anywhere}
+.srcrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px}
+.notebar{font-size:14px;color:var(--unk);background:var(--unk-soft);border-radius:8px;padding:6px 10px}
+.pill{font:600 12px var(--f-body);padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.primary{font:600 15px var(--f-body);padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:var(--sheet);cursor:pointer}
+.primary:disabled{opacity:.5;cursor:default}
+.ghost{font:500 13px var(--f-body);padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink-2);cursor:pointer}
+.main{padding-block:24px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-width:0}
+.col{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.head h1{font-family:var(--f-display);font-weight:600;font-size:1.5rem;margin:0;text-wrap:balance}
+.head p{margin:0;color:var(--ink-2);font-size:14px}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.given{display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:2px;font-size:1.15rem;align-items:baseline;overflow-x:auto}
+.given .k{color:var(--ink-2);font-size:15px}
+.given .eq{font-weight:500;white-space:nowrap}
+.given .note{grid-column:2;color:var(--ink-2);font-size:14px}
+.ask{border-top:1px dashed var(--line);padding-top:12px}
+.ask .lab{font-size:14px;color:var(--ink-2)}
+.ask .st2{font-family:var(--f-display);font-weight:600;font-size:1.15rem}
+.ask .st{font-family:var(--f-display);font-weight:600;font-size:1.5rem;white-space:nowrap;overflow-x:auto}
+.stem{white-space:pre-wrap;font-size:1.1rem;overflow-wrap:anywhere}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.choices.mc{grid-template-columns:1fr}
+.ch{font:600 16px var(--f-body);padding:12px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--sheet);color:var(--ink);cursor:pointer;text-align:center}
+.choices.mc .ch{text-align:left;font-weight:500;display:flex;gap:10px;align-items:baseline}
+.choices.mc .ch b{color:var(--accent);min-width:1.2em}
+.ch:hover:not(:disabled){border-color:var(--accent)}
+.ch.sel{border-color:var(--accent);background:var(--accent-soft)}
+.ch:disabled{cursor:default}
+.ch.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.ch.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad);text-decoration:line-through}
+:is(.ch,.subj,.seg button,.primary,.ghost,.qk,.send,.stop,select,textarea,summary):focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.verdict{font-family:var(--f-display);font-weight:600;font-size:1.1rem;margin:0}
+.verdict.good{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.explain{display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:13px;color:var(--ink-2);margin:0;letter-spacing:.02em}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--accent-soft);color:var(--ink);border-radius:8px;padding:4px 10px;font-weight:600}
+.chip.hl{outline:2px solid var(--mark);outline-offset:2px}
+.chip.dim,.op.dim{opacity:.35}
+.op{color:var(--ink-2);font-size:18px}
+.op.hl{color:var(--mark);font-weight:600}
+ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.src{color:var(--ink-2);font-size:13px}
+.navrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.state{display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;padding-block:28px}
+.state p{margin:0;max-width:44ch}
+.spin{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.result{display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+.sticker{font-size:72px;line-height:1;width:120px;height:120px;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);border:3px solid var(--sheet);box-shadow:0 0 0 2px var(--line)}
+.sticker.good{background:var(--ok-soft)} .sticker.mid{background:var(--unk-soft)} .sticker.bad{background:var(--bad-soft)}
+@media (prefers-reduced-motion:no-preference){.sticker{animation:pop .6s cubic-bezier(.2,1.6,.4,1)}}
+@keyframes pop{from{transform:scale(.4) rotate(-12deg)}to{transform:none}}
+.big{font-family:var(--f-display);font-size:2.6rem;font-weight:600;font-variant-numeric:tabular-nums;margin:0}
+.msgt{font-family:var(--f-display);font-weight:600;font-size:1.3rem;margin:0}
+.lvchg{font-size:14px;padding:4px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.review{width:100%;text-align:left;display:flex;flex-direction:column;gap:8px}
+.review details{border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.review summary{cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.review summary span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.review .x{color:var(--bad);white-space:nowrap} .review .o{color:var(--ok);white-space:nowrap}
+.review .body{display:flex;flex-direction:column;gap:10px;padding-top:10px}
+.askbox{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.qk{font:500 14px var(--f-body);padding:6px 12px;border-radius:999px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer}
+.thread{display:flex;flex-direction:column;gap:8px}
+.msg{padding:8px 12px;border-radius:12px;white-space:pre-wrap;max-width:92%;min-width:0;overflow-wrap:anywhere;line-height:1.65}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--sheet)}
+.msg.ai{align-self:flex-start;background:var(--paper);border:1px solid var(--line)}
+.msg.wait{color:var(--ink-2);font-style:italic}
+.askform{display:flex;flex-direction:column;gap:8px;margin:0}
+.askform textarea{width:100%;box-sizing:border-box;font-size:16px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical}
+.askrow{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.asknote{flex:1;min-width:0;font-size:13px;color:var(--ink-2)}
+.send,.stop{font:600 15px var(--f-body);padding:8px 16px;border-radius:10px;cursor:pointer}
+.send{border:none;background:var(--accent);color:var(--sheet)}
+.send:disabled{opacity:.5;cursor:default}
+.stop{border:1px solid var(--line);background:var(--sheet);color:var(--ink)}
+.nge{position:relative;display:inline-block}
+.nge::after{content:"";position:absolute;left:50%;top:12%;bottom:12%;border-left:1.6px solid currentColor;transform:translateX(-50%) rotate(22deg)}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding-right:max(16px,env(safe-area-inset-right,0px));gap:12px}
+  nav.subjects{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .subj{flex:0 0 auto}
+  .set{display:grid;grid-template-columns:1fr 1fr;align-items:end}
+  .set .primary{grid-column:1/-1}
+}
+@media (max-width:440px){.choices:not(.mc) .ch{font-size:15px;padding:12px 4px}.ask .st{font-size:1.3rem}}
+@media (prefers-reduced-motion:reduce){.bar>i{transition:none}.spin{animation-duration:3s}}
+</style></head><body>
+
+<div class="app">
+  <aside class="side" aria-label="เมนู">
+    <p class="brand">ระบบซ้อมสอบ<small>โจทย์ใหม่ทุกชุด ความยากปรับตามผลของคุณ</small></p>
+    <div>
+      <p class="cap">วิชา</p>
+      <nav class="subjects" id="subjects"></nav>
+    </div>
+    <div class="set">
+      <div class="field">
+        <label for="count">จำนวนข้อ</label>
+        <select id="count"><option value="5">5 ข้อ</option><option value="10">10 ข้อ</option><option value="15">15 ข้อ</option><option value="20">20 ข้อ</option></select>
+      </div>
+      <div class="field">
+        <span class="fl" id="mode-l">การเฉลย</span>
+        <div class="seg" role="group" aria-labelledby="mode-l">
+          <button id="mode-now" aria-pressed="true">ทันที</button>
+          <button id="mode-end" aria-pressed="false">ตอนท้าย</button>
+        </div>
+      </div>
+      <button class="primary" id="newset">สร้างชุดใหม่</button>
+    </div>
+    <details class="aiset" id="aiset"><summary><span>ตั้งค่า AI</span><span class="pill" id="aipill">-</span></summary><div class="bd" id="aibody"></div></details>
+  </aside>
+  <main class="main">
+    <div class="col">
+      <div class="head">
+        <div><h1 id="title">เงื่อนไขสัญลักษณ์</h1><p id="desc"></p></div>
+        <button class="ghost" id="resetlv">เริ่มระดับ 1 ใหม่</button>
+      </div>
+      <section class="sheet" id="sheet" aria-live="polite"></section>
+    </div>
+  </main>
+</div>
+
+<script>
+const SUBJ=[
+ {id:'ineq',name:'เงื่อนไขสัญลักษณ์',desc:'อสมการ 2 บรรทัด ตัดสินข้อสรุปว่า จริง ไม่จริง หรือสรุปไม่ได้',ai:false},
+ {id:'series',name:'อนุกรม',desc:'อนุกรมตัวเลข หาจำนวนถัดไปหรือจำนวนที่หายไป',ai:false},
+ {id:'math',name:'คณิตศาสตร์ทั่วไป',desc:'ร้อยละ อัตราส่วน กำไรขาดทุน ความเร็ว อายุ และโจทย์ปัญหา',ai:false},
+ {id:'logic',name:'เงื่อนไขภาษา',desc:'ให้ข้อความเงื่อนไข 2–3 ข้อ แล้วเลือกข้อสรุปที่ถูกต้อง',ai:false},
+ {id:'thai',name:'ภาษาไทย',desc:'การเข้าใจภาษา การใช้ภาษา เรียงประโยค และคำผิด · โจทย์สร้างโดย AI',ai:true},
+ {id:'eng',name:'ภาษาอังกฤษ',desc:'Grammar, vocabulary และ reading สั้นๆ · โจทย์สร้างโดย AI',ai:true},
+];
+const LEVEL_TXT={1:'ง่ายมาก พื้นฐาน ขั้นตอนเดียว',2:'ง่าย 1–2 ขั้นตอน',3:'ปานกลาง ระดับข้อสอบ ก.พ. ทั่วไป',4:'ยาก หลายขั้นตอน มีตัวลวง',5:'ยากมาก ระดับแข่งขันสูง ตัวลวงแนบเนียน'};
+const LBL={T:'จริง',F:'ไม่จริง',U:'สรุปไม่ได้'};
+const TFU=['T','F','U'];
+const TH=['ก','ข','ค','ง','จ'];
+const isTFU=q=>q.kind==='ineq'||(q.kind==='ineq2'&&q.fmt==='tfu');
+const qLabel=q=>q.kind==='ineq'?q.text:q.kind==='ineq2'?(q.fmt==='tfu'?`${q.lines.join(' และ ')} ⇒ ${q.text}`:`${q.lines.join(' และ ')} ⇒ ข้อใดถูกแน่นอน`):q.stem;
+
+/* ---------- prefs (per-viewer convenience) ---------- */
+let P={subject:'ineq',count:10,mode:'now',levels:{},weak:{}};
+try{const s=JSON.parse(localStorage.getItem('exam-drill-v1')||'null');if(s)P={...P,...s}}catch(e){}
+const save=()=>{try{localStorage.setItem('exam-drill-v1',JSON.stringify(P))}catch(e){}};
+const lvOf=id=>P.levels[id]||1;
+
+/* ---------- helpers ---------- */
+const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fx=h=>h.replace(/≯/g,'<span class="nge">&gt;</span>').replace(/≮/g,'<span class="nge">&lt;</span>');
+const c=(n,L)=>n===1?L:n+L;
+const FR={2:'½',3:'⅓',4:'¼',5:'⅕'};
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+/* ---------- inequality generator (answers derived by rule, always consistent) ---------- */
+const TPL=[
+ {d:'m',f:x=>({text:`${x.Y} > ${x.H}`,ans:'U',hl:[1,3],steps:[[`ในแถวรวมมีแค่ ${c(x.k,x.Y)} ไม่มี ${x.Y} ตัวเดียว`,`คูณ ${x.k} บรรทัดล่าง`],[`ลากจาก ${c(x.k,x.Y)} ไป ${x.H} ได้ ${c(x.k,x.Y)} > ${x.H} คือ ${x.Y} ${x.k} ตัวรวมกันมากกว่า ${x.H}`,'แถวรวม'],[`ไม่ได้บอกว่า ${x.Y} ตัวเดียวมากกว่า ${x.H} จึงสรุปไม่ได้`,'ความหมายของการคูณ']]})},
+ {d:'m',f:x=>({text:`${x.X} < ${x.M}`,ans:'U',hl:[0,4],steps:[[`ในแถวรวมมีแค่ ${c(x.k,x.X)} ไม่มี ${x.X} ตัวเดียว`,`คูณ ${x.k} บรรทัดล่าง`],[`ลากจาก ${c(x.k,x.X)} ไป ${x.M} ได้ ${c(x.k,x.X)} > ${x.M} คือ ${x.X} ${x.k} ตัวรวมกันมากกว่า ${x.M}`,'แถวรวม'],[`ไม่ได้บอกว่า ${x.X} ตัวเดียวน้อยกว่าหรือมากกว่า ${x.M} จึงสรุปไม่ได้`,'ความหมายของการคูณ']]})},
+ {d:'e',f:x=>{const p=Array.from({length:x.k},(_,i)=>i%2?x.Y:x.X);return{text:`${p.join(' + ')} > ${x.H}`,ans:'T',hl:[0,3],steps:[[`${x.Y} = ${x.X} เปลี่ยน ${x.Y} เป็น ${x.X} ได้ ทั้งหมดจึงเป็น ${x.X} ${x.k} ตัว คือ ${c(x.k,x.X)}`,'บรรทัดล่าง'],[`บรรทัดบนมี ${c(x.k,x.X)} > ${x.H} อยู่แล้ว`,'บรรทัดบน'],['ดังนั้นข้อสรุปจริง','ข้อ 1 และ 2']]}}},
+ {d:'e',f:x=>({text:`${x.X} ≠ ${x.Y}`,ans:'F',hl:[0,1],steps:[[`บรรทัดล่างบอก ${x.X} = ${x.Y}`,'บรรทัดล่าง'],['ข้อสรุปบอกว่าไม่เท่ากัน ขัดกับโจทย์ จึงไม่จริง','เทียบกับโจทย์']]})},
+ {d:'e',f:x=>({text:`${c(x.k,x.Q)} > ${x.M}`,ans:'T',hl:[2,4],steps:[[`ลากจาก ${c(x.k,x.Q)} ไป ${x.M} ผ่าน > > ได้ ${c(x.k,x.Q)} > ${x.M}`,'แถวรวม'],['ตรงกับข้อสรุป จึงจริง','เทียบกับข้อสรุป']]})},
+ {d:'e',f:x=>({text:`${c(x.k,x.Y)} < ${x.M}`,ans:'F',hl:[1,4],steps:[[`ลากจาก ${c(x.k,x.Y)} ไป ${x.M} ผ่าน > > > ได้ ${c(x.k,x.Y)} > ${x.M}`,'แถวรวม'],['ข้อสรุปบอกกลับด้าน จึงไม่จริง','เทียบกับข้อสรุป']]})},
+ {d:'h',f:x=>({text:`2${x.R} + ${x.S} < ${x.M}`,ans:'F',hl:[4,5],steps:[[`แยก 2${x.R} + ${x.S} เป็น (${x.R} + ${x.S}) + ${x.R}`,'แยกชิ้นในข้อสรุป'],[`${x.M} ≯ ${x.R} + ${x.S} แปลว่า ${x.R} + ${x.S} มากกว่าหรือเท่ากับ ${x.M}`,'บรรทัดบน'],[`บวก ${x.R} เพิ่ม (มากกว่า 0) ยิ่งมากกว่า ${x.M} ได้ 2${x.R} + ${x.S} > ${x.M}`,'ทุกตัวมากกว่าศูนย์'],['ข้อสรุปบอกกลับด้าน จึงไม่จริง','เทียบกับข้อสรุป']]})},
+ {d:'m',f:x=>({text:`${x.R} > ${x.M}`,ans:'U',hl:null,steps:[[`${x.R} อยู่ในก้อน ${x.R} + ${x.S} เท่านั้น แยกออกมาตัวเดียวไม่ได้`,'บรรทัดบน'],[`ไม่มี ${x.R} ตัวเดียวให้ลากเส้นไปหา ${x.M} จึงสรุปไม่ได้`,'แถวรวม']]})},
+ {d:'m',f:x=>({text:`${c(x.k,x.Q)} < ${x.R}`,ans:'U',hl:null,steps:[[`${x.R} อยู่ในก้อน ${x.R} + ${x.S} เท่านั้น และก้อนนี้ต่อกับแถวด้วย ≯`,'บรรทัดบน'],[`ไม่มีทางลากเส้นจาก ${c(x.k,x.Q)} ไป ${x.R} ตัวเดียว จึงสรุปไม่ได้`,'แถวรวม']]})},
+ {d:'h',f:x=>({text:`${c(x.k,x.Q)} + ${x.H} > 2${x.M}`,ans:'T',hl:[2,4],steps:[[`แยก 2${x.M} เป็น ${x.M} + ${x.M} แล้วจับคู่ทีละชิ้น`,'แยกชิ้นในข้อสรุป'],[`ชิ้นแรก ${c(x.k,x.Q)} > ${x.M}`,'แถวรวม'],[`ชิ้นที่สอง ${x.H} > ${x.M}`,'บรรทัดบน'],['ฝั่งซ้ายชนะทั้งสองชิ้น บวกกันก็ชนะ จึงจริง','ข้อ 2 และ 3']]})},
+ {d:'h',f:x=>({text:`${c(x.k,x.X)} + ${x.Y} > ${c(x.k,x.Q)}`,ans:'T',hl:[0,2],steps:[[`ลากจาก ${c(x.k,x.X)} ไป ${c(x.k,x.Q)} ผ่าน = > ได้ ${c(x.k,x.X)} > ${c(x.k,x.Q)}`,'แถวรวม'],[`ฝั่งซ้ายยังบวก ${x.Y} เพิ่ม (มากกว่า 0) ยิ่งชนะ จึงจริง`,'ทุกตัวมากกว่าศูนย์']]})},
+ {d:'h',f:x=>({text:`${x.M} + ${x.H} < ${c(2*x.k,x.Y)}`,ans:'T',hl:[1,4],steps:[[`แยก ${c(2*x.k,x.Y)} เป็น ${c(x.k,x.Y)} + ${c(x.k,x.Y)}`,'แยกชิ้นในข้อสรุป'],[`ชิ้นแรก ${c(x.k,x.Y)} > ${x.H} และชิ้นที่สอง ${c(x.k,x.Y)} > ${x.M}`,'แถวรวม'],[`ฝั่ง ${x.Y} ชนะทั้งสองชิ้น บวกกันก็ชนะ จึงจริง`,'ข้อ 1 และ 2']]})},
+ {d:'e',f:x=>({text:`${x.H} < ${x.M}`,ans:'F',hl:[3,4],steps:[[`บรรทัดบนบอก ${x.H} > ${x.M}`,'บรรทัดบน'],['ข้อสรุปบอกกลับด้าน จึงไม่จริง','เทียบกับโจทย์']]})},
+ {d:'m',f:x=>({text:`${x.Q} > ${x.M}`,ans:'U',hl:[2,4],steps:[[`ในแถวรวมมีแค่ ${c(x.k,x.Q)} ไม่มี ${x.Q} ตัวเดียว`,`คูณ ${x.k} บรรทัดล่าง`],[`รู้แค่ ${c(x.k,x.Q)} > ${x.M} ไม่พอบอกว่า ${x.Q} ตัวเดียวมากกว่า ${x.M} จึงสรุปไม่ได้`,'แถวรวม']]})},
+ {d:'h',f:x=>({text:`2${x.M} > ${x.H} + ${c(x.k,x.X)}`,ans:'F',hl:[0,4],steps:[[`แยก 2${x.M} เป็น ${x.M} + ${x.M}`,'แยกชิ้นในข้อสรุป'],[`${x.H} > ${x.M} และ ${c(x.k,x.X)} > ${x.M}`,'บรรทัดบน'],[`ได้ ${x.H} + ${c(x.k,x.X)} > 2${x.M} ข้อสรุปบอกกลับด้าน จึงไม่จริง`,'ข้อ 1 และ 2']]})},
+ {d:'h',f:x=>({text:`${c(x.k+1,x.Y)} < ${x.M}`,ans:'F',hl:[1,4],steps:[[`${c(x.k+1,x.Y)} คือ ${c(x.k,x.Y)} + ${x.Y}`,'แยกชิ้นในข้อสรุป'],[`ลากจาก ${c(x.k,x.Y)} ไป ${x.M} ได้ ${c(x.k,x.Y)} > ${x.M}`,'แถวรวม'],[`บวก ${x.Y} เพิ่มยิ่งมากกว่า ได้ ${c(x.k+1,x.Y)} > ${x.M} ข้อสรุปบอกกลับด้าน จึงไม่จริง`,'ทุกตัวมากกว่าศูนย์']]})},
+];
+const ILV={1:{d:'e',k:[2]},2:{d:'em',k:[2]},3:{d:'emh',k:[2,3]},4:{d:'mhh',k:[3,4]},5:{d:'hhm',k:[4,5]}};
+function ctxFor(k){const L=shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ'.split('')).slice(0,7);return{X:L[0],Y:L[1],Q:L[2],H:L[3],M:L[4],R:L[5],S:L[6],k}}
+function genIneq(level,n){
+  const cfg=ILV[level];const out=[];let last=-1;
+  for(let i=0;i<n;i++){
+    const d=rnd(cfg.d.split(''));let pool=TPL.map((t,j)=>j).filter(j=>TPL[j].d===d&&j!==last);
+    const j=rnd(pool);last=j;const ctx=ctxFor(rnd(cfg.k));const q=TPL[j].f(ctx);
+    out.push({kind:'ineq',ctx,text:q.text,hl:q.hl,steps:q.steps,choices:TFU.map(a=>LBL[a]),answer:TFU.indexOf(q.ans)});
+  }
+  return out;
+}
+
+/* ---------- เงื่อนไขสัญลักษณ์: engine v2 ---------- */
+/* LP feasibility (phase-1 simplex, Bland's rule). rows: {a:[...n], b, t:'ge'|'eq'} meaning a·x >= b or a·x = b, x >= 0 */
+function lpFeasible(rows,n){
+  const m=rows.length,ns=rows.filter(r=>r.t==='ge').length,N=n+ns+m,T=[],basis=[];
+  let si=n;
+  rows.forEach((r,i)=>{const row=new Array(N+1).fill(0);for(let j=0;j<n;j++)row[j]=r.a[j]||0;if(r.t==='ge'){row[si]=-1;si++}row[N]=r.b;
+    if(row[N]<0)for(let k=0;k<=N;k++)row[k]=-row[k];row[n+ns+i]=1;T.push(row);basis.push(n+ns+i)});
+  const z=new Array(N+1).fill(0);
+  for(let j=0;j<n+ns;j++){let s=0;for(let i=0;i<m;i++)s+=T[i][j];z[j]=-s}
+  {let s=0;for(let i=0;i<m;i++)s+=T[i][N];z[N]=-s}
+  for(let it=0;it<800;it++){
+    let j=-1;for(let k=0;k<N;k++)if(z[k]<-1e-9){j=k;break}
+    if(j<0)break;
+    let r=-1,best=Infinity;
+    for(let i=0;i<m;i++)if(T[i][j]>1e-9){const q=T[i][N]/T[i][j];if(q<best-1e-12||(Math.abs(q-best)<=1e-12&&basis[i]<basis[r])){best=q;r=i}}
+    if(r<0)break;
+    const pv=T[r][j];for(let k=0;k<=N;k++)T[r][k]/=pv;
+    for(let i=0;i<m;i++)if(i!==r&&Math.abs(T[i][j])>1e-12){const f=T[i][j];for(let k=0;k<=N;k++)T[i][k]-=f*T[r][k]}
+    {const f=z[j];for(let k=0;k<=N;k++)z[k]-=f*T[r][k]}
+    basis[r]=j;
+  }
+  return Math.abs(z[N])<1e-6;
+}
+const NEG={'>':'≤','<':'≥','≥':'<','≤':'>','=':'≠','≠':'=','≯':'>','≮':'<'};
+function relRows(op,L,R,V){
+  const d=V.map(v=>(L[v]||0)-(R[v]||0)),nd=d.map(x=>-x);
+  switch(op){
+    case '>':return[[{a:d,b:1,t:'ge'}]];case '<':return[[{a:nd,b:1,t:'ge'}]];
+    case '≥':case '≮':return[[{a:d,b:0,t:'ge'}]];case '≤':case '≯':return[[{a:nd,b:0,t:'ge'}]];
+    case '=':return[[{a:d,b:0,t:'eq'}]];case '≠':return[[{a:d,b:1,t:'ge'}],[{a:nd,b:1,t:'ge'}]];
+  }
+}
+const SUMSEP='+';
+function atomMap(at){const m={};if(at.node.includes(SUMSEP))for(const l of at.node.split(SUMSEP))m[l]=(m[l]||0)+at.k;else m[at.node]=at.k;return m}
+function piecesMap(pcs){const m={};for(const p of pcs){const a=atomMap(p);for(const l in a)m[l]=(m[l]||0)+a[l]}return m}
+function premRows(P,V){
+  const rows=V.map((v,i)=>({a:V.map((_,j)=>j===i?1:0),b:1,t:'ge'}));
+  for(const line of P.lines)for(let i=0;i<line.ops.length;i++)rows.push(...relRows(line.ops[i],atomMap(line.atoms[i]),atomMap(line.atoms[i+1]),V)[0]);
+  return rows;
+}
+function possible(base,op,L,R,V){return relRows(op,L,R,V).some(alt=>lpFeasible([...base,...alt],V.length))}
+function lpVerdict(base,op,L,R,V){
+  if(!possible(base,NEG[op],L,R,V))return'T';
+  if(!possible(base,op,L,R,V))return'F';
+  return'U';
+}
+
+/* formatting */
+function fmtK(k){
+  if(Math.abs(k-1)<1e-9)return'';
+  if(Math.abs(k-Math.round(k))<1e-9)return String(Math.round(k));
+  const U={'0.5':'½','0.333':'⅓','0.25':'¼','0.667':'⅔','0.2':'⅕','0.75':'¾'},key=String(Math.round(k*1000)/1000);
+  if(U[key])return U[key];
+  for(let d=2;d<=12;d++){const nn=k*d;if(Math.abs(nn-Math.round(nn))<1e-9)return`${Math.round(nn)}/${d}`}
+  return String(Math.round(k*100)/100);
+}
+function atomStr(k,node){return node.includes(SUMSEP)?(Math.abs(k-1)<1e-9?node.split(SUMSEP).join(' + '):`${fmtK(k)}(${node.split(SUMSEP).join(' + ')})`):fmtK(k)+node}
+function mapStr(m){return Object.keys(m).filter(l=>m[l]>1e-9).map(l=>fmtK(m[l])+l).join(' + ')}
+function lineStr(line){let s=atomStr(line.atoms[0].k,line.atoms[0].node);for(let i=0;i<line.ops.length;i++)s+=` ${line.ops[i]} ${atomStr(line.atoms[i+1].k,line.atoms[i+1].node)}`;return s}
+
+/* relation graph: edge u→v (w, strict, eq) means u >= w·v */
+function buildGraph(P){
+  const E={};const add=(u,v,w,strict,eq,src)=>{(E[u]=E[u]||[]).push({v,w,strict,eq,src})};
+  P.lines.forEach((line,li)=>{for(let i=0;i<line.ops.length;i++){
+    const A=line.atoms[i],B=line.atoms[i+1],op=line.ops[i],src=li;
+    if(op==='>')add(A.node,B.node,B.k/A.k,true,false,src);
+    else if(op==='≥'||op==='≮')add(A.node,B.node,B.k/A.k,false,false,src);
+    else if(op==='<')add(B.node,A.node,A.k/B.k,true,false,src);
+    else if(op==='≤'||op==='≯')add(B.node,A.node,A.k/B.k,false,false,src);
+    else if(op==='='){add(A.node,B.node,B.k/A.k,false,true,src);add(B.node,A.node,A.k/B.k,false,true,src)}
+  }});
+  for(const line of P.lines)for(const at of line.atoms)if(at.node.includes(SUMSEP))for(const l of at.node.split(SUMSEP))if(!(E[at.node]||[]).some(e=>e.v===l&&e.part))(E[at.node]=E[at.node]||[]).push({v:l,w:1,strict:true,eq:false,src:-1,part:true});
+  return E;
+}
+function allPaths(E,u,v){
+  const out=[];
+  (function dfs(n,seen,edges){if(n===v&&edges.length){out.push(edges.slice());return}if(edges.length>7)return;
+    for(const e of E[n]||[])if(!seen.has(e.v)){seen.add(e.v);edges.push(e);dfs(e.v,seen,edges);edges.pop();seen.delete(e.v)}})(u,new Set([u]),[]);
+  return out;
+}
+const RANK={'>':3,'=':2,'≥':1};
+/* does c·u relate to d·v? returns {rel:'>'|'='|'≥'|null, chain, srcs, near} */
+function dom(E,c,u,d,v){
+  if(u===v){const rel=c>d+1e-9?'>':Math.abs(c-d)<1e-9?'=':null;return{rel,chain:rel?`${atomStr(c,u)} ${rel} ${atomStr(d,v)}`:'',srcs:[],same:true}}
+  let best=null,near=null;
+  for(const p of allPaths(E,u,v)){
+    let w=1,strict=false,eq=true;for(const e of p){w*=e.w;strict=strict||e.strict;eq=eq&&e.eq}
+    const val=c*w;let rel=null;
+    if(val>d+1e-9)rel='>';else if(Math.abs(val-d)<1e-9)rel=strict?'>':eq?'=':'≥';
+    const info={rel,p,w,val};
+    if(rel&&(!best||RANK[rel]>RANK[best.rel]||(RANK[rel]===RANK[best.rel]&&p.length<best.p.length)))best=info;
+    if(!rel&&(!near||val>near.val))near=info;
+  }
+  const chainOf=info=>{let k=c,s=atomStr(k,u);for(const e of info.p){k*=e.w;s+=` ${e.eq?'=':e.strict?'>':'≥'} ${atomStr(k,e.v)}`}return{s,end:k}};
+  if(best){const ch=chainOf(best);return{rel:best.rel,chain:ch.s,end:ch.end,srcs:[...new Set(best.p.map(e=>e.src))],node:v}}
+  if(near){const ch=chainOf(near);return{rel:null,chain:ch.s,end:ch.end,srcs:[...new Set(near.p.map(e=>e.src))],node:v,near:true}}
+  return{rel:null,chain:'',srcs:[]};
+}
+const srcTxt=(srcs,scaled)=>{const ls=srcs.filter(s=>s>=0).map(s=>`บรรทัดที่ ${s+1}`),pt=srcs.includes(-1);
+  return [ls.length?ls.join(' และ '):'',pt?'ผลบวกมากกว่าส่วนย่อยแต่ละตัว':'',scaled?'ปรับตัวคูณให้ตัวเชื่อมตรงกัน':''].filter(Boolean).join(' · ')||'โจทย์'};
+function expandUnits(pcs){const u=[];for(const p of pcs){if(Math.abs(p.k-Math.round(p.k))<1e-9&&p.k>1)for(let i=0;i<Math.round(p.k);i++)u.push({node:p.node,k:1});else u.push(p)}return u}
+function perms(n,r){const out=[];(function go(cur,used){if(cur.length===r){out.push(cur.slice());return}for(let i=0;i<n;i++)if(!used[i]){used[i]=1;cur.push(i);go(cur,used);cur.pop();used[i]=0}})([],[]);return out}
+/* derive Big vs Small; returns {rel, steps} */
+function derive(E,Big,Small){
+  const bu=expandUnits(Big),su=expandUnits(Small);
+  if(bu.length===1&&su.length===1){
+    const r=dom(E,bu[0].k,bu[0].node,su[0].k,su[0].node);
+    if(r.rel){const steps=[];
+      if(r.same)steps.push([`${r.chain} เพราะเป็นตัวเดียวกันแต่ตัวคูณ${r.rel==='>'?'มากกว่า':'เท่ากัน'}`,'เทียบตัวคูณ']);
+      else{const scaled=r.chain.match(/[½⅓¼⅔⅕¾\d]/);steps.push([`ไล่จากโจทย์: ${r.chain}`,srcTxt(r.srcs,scaled)]);
+        if(Math.abs(r.end-su[0].k)>1e-9)steps.push([`${atomStr(r.end,su[0].node)} มากกว่า ${atomStr(su[0].k,su[0].node)} เพราะตัวคูณมากกว่า จึงได้ ${atomStr(bu[0].k,bu[0].node)} > ${atomStr(su[0].k,su[0].node)}`,'เทียบตัวคูณ'])}
+      return{rel:r.rel,steps};
+    }
+    return{rel:null,near:r,steps:[]};
+  }
+  if(bu.length<su.length)return{rel:null,steps:[]};
+  let best=null;
+  for(const pm of perms(bu.length,su.length)){
+    const rs=pm.map((bi,si)=>dom(E,bu[bi].k,bu[bi].node,su[si].k,su[si].node));
+    if(rs.every(r=>r.rel)){const sc=rs.filter(r=>r.rel==='>').length+(bu.length>su.length?1:0),eqAll=rs.every(r=>r.rel==='=')&&bu.length===su.length;
+      if(!best||sc>best.sc)best={pm,rs,sc,eqAll}}
+  }
+  if(!best)return{rel:null,steps:[]};
+  const rel=best.sc>0?'>':best.eqAll?'=':'≥';
+  const steps=[[`แยกเป็นชิ้น: ${bu.map(p=>atomStr(p.k,p.node)).join(' , ')} เทียบกับ ${su.map(p=>atomStr(p.k,p.node)).join(' , ')}`,'แยกชิ้นในข้อสรุป']];
+  best.rs.forEach((r,si)=>{const tail=!r.same&&Math.abs(r.end-su[si].k)>1e-9?` และ ${atomStr(r.end,su[si].node)} > ${atomStr(su[si].k,su[si].node)} เพราะตัวคูณมากกว่า`:'';steps.push([`จับคู่: ${r.chain}${tail}`,r.same?'เทียบตัวคูณ':srcTxt(r.srcs,/[½⅓¼⅔⅕¾\d]/.test(r.chain))])});
+  const used=new Set(best.pm),left=bu.filter((_,i)=>!used.has(i));
+  steps.push([`ฝั่ง ${mapStr(piecesMap(Big))} ชนะทุกคู่${left.length?` และยังเหลือ ${left.map(p=>atomStr(p.k,p.node)).join(' + ')} ซึ่งมากกว่า 0`:''} จึงได้ ${mapStr(piecesMap(Big))} ${rel} ${mapStr(piecesMap(Small))}`,'บวกชิ้นที่ชนะเข้าด้วยกัน']);
+  return{rel,steps};
+}
+/* engine verdict + explanation for: Lp op Rp */
+function explain(E,op,Lp,Rp){
+  const Ls=mapStr(piecesMap(Lp)),Rs=mapStr(piecesMap(Rp));
+  const claim={'>':[Lp,Rp,true],'<':[Rp,Lp,true],'≥':[Lp,Rp,false],'≮':[Lp,Rp,false],'≤':[Rp,Lp,false],'≯':[Rp,Lp,false]}[op];
+  const meaning={'≯':`${Ls} ≯ ${Rs} แปลว่า ${Ls} ไม่มากกว่า ${Rs} (น้อยกว่าหรือเท่ากับ)`,'≮':`${Ls} ≮ ${Rs} แปลว่า ${Ls} ไม่น้อยกว่า ${Rs} (มากกว่าหรือเท่ากับ)`,'≠':`ข้อสรุปบอกว่า ${Ls} กับ ${Rs} ไม่เท่ากัน`}[op];
+  const pre=meaning?[[meaning,'ความหมายของเครื่องหมาย']]:[];
+  if(claim){
+    const [B,S,strict]=claim,Bs=mapStr(piecesMap(B)),Ss=mapStr(piecesMap(S));
+    const d1=derive(E,B,S);
+    if(d1.rel&&(d1.rel==='>'||!strict))return{v:'T',steps:[...pre,...d1.steps,[`ตรงกับข้อสรุป จึง จริง`,'เทียบกับข้อสรุป']]};
+    const d2=derive(E,S,B);
+    if(d2.rel&&(d2.rel!=='≥'||strict)&&(strict||d2.rel==='>'))return{v:'F',steps:[...pre,...d2.steps,[`ได้ ${Ss} ${d2.rel} ${Bs} ซึ่งขัดกับข้อสรุป จึง ไม่จริง`,'เทียบกับข้อสรุป']]};
+    if(d1.rel)return{v:'U',steps:[...pre,...d1.steps,[`ได้แค่ ${Bs} ${d1.rel} ${Ss} ซึ่งอาจเท่ากันได้ จึงยืนยันว่า ${Bs} > ${Ss} ไม่ได้ ตอบ สรุปไม่ได้`,'เทียบกับข้อสรุป']]};
+    if(d2.rel)return{v:'U',steps:[...pre,...d2.steps,[`ได้แค่ ${Ss} ${d2.rel} ${Bs} ซึ่งอาจเท่ากันได้ ข้อสรุปจึงไม่ผิดแน่นอน และไม่ถูกแน่นอน ตอบ สรุปไม่ได้`,'เทียบกับข้อสรุป']]};
+    return{v:'U',steps:[...pre,...uSteps(d1,B,S)]};
+  }
+  const d1=derive(E,Lp,Rp),d2=derive(E,Rp,Lp);
+  if(op==='='){
+    if(d1.rel==='=')return{v:'T',steps:[...d1.steps,['ทุกขั้นเป็นเครื่องหมาย = จึงเท่ากัน ข้อสรุป จริง','เทียบกับข้อสรุป']]};
+    if(d1.rel==='>')return{v:'F',steps:[...d1.steps,[`${Ls} มากกว่า ${Rs} จึงไม่เท่ากัน ข้อสรุป ไม่จริง`,'เทียบกับข้อสรุป']]};
+    if(d2.rel==='>')return{v:'F',steps:[...d2.steps,[`${Rs} มากกว่า ${Ls} จึงไม่เท่ากัน ข้อสรุป ไม่จริง`,'เทียบกับข้อสรุป']]};
+    const dd=d1.rel?d1:d2;
+    if(dd.rel)return{v:'U',steps:[...dd.steps,['ได้แค่ ≥ อาจเท่ากันหรือไม่เท่าก็ได้ จึง สรุปไม่ได้','เทียบกับข้อสรุป']]};
+    return{v:'U',steps:uSteps(d1,Lp,Rp)};
+  }
+  if(op==='≠'){
+    if(d1.rel==='>')return{v:'T',steps:[...pre,...d1.steps,[`${Ls} มากกว่า ${Rs} จึงไม่เท่ากันแน่นอน ข้อสรุป จริง`,'เทียบกับข้อสรุป']]};
+    if(d2.rel==='>')return{v:'T',steps:[...pre,...d2.steps,[`${Rs} มากกว่า ${Ls} จึงไม่เท่ากันแน่นอน ข้อสรุป จริง`,'เทียบกับข้อสรุป']]};
+    if(d1.rel==='=')return{v:'F',steps:[...pre,...d1.steps,['ทั้งสองเท่ากัน ข้อสรุปที่บอกว่าไม่เท่าจึง ไม่จริง','เทียบกับข้อสรุป']]};
+    const dd=d1.rel?d1:d2;
+    if(dd.rel)return{v:'U',steps:[...pre,...dd.steps,['ได้แค่ ≥ อาจเท่ากันได้ จึงยืนยันว่าไม่เท่ากันไม่ได้ ตอบ สรุปไม่ได้','เทียบกับข้อสรุป']]};
+    return{v:'U',steps:[...pre,...uSteps(d1,Lp,Rp)]};
+  }
+}
+function uSteps(d,A,B){
+  const As=mapStr(piecesMap(A)),Bs=mapStr(piecesMap(B));
+  if(d.near&&d.near.chain&&!d.near.same){const r=d.near;return[[`ไล่จากโจทย์ได้: ${r.chain}`,srcTxt(r.srcs,true)],[`แต่ ${atomStr(r.end,r.node)} น้อยกว่า ${Bs} ตัวคูณไม่พอ จึงบอกไม่ได้ว่าใครมากกว่า ตอบ สรุปไม่ได้`,'เทียบตัวคูณ']]}
+  if(expandUnits(A).length+expandUnits(B).length>2)return[[`ลองจับคู่ชิ้นของ ${As} กับ ${Bs} แล้ว ไม่มีฝั่งไหนชนะได้ครบทุกคู่`,'แยกชิ้นในข้อสรุป'],['ข้อมูลไม่พอยืนยันทั้งสองทาง ตอบ สรุปไม่ได้','เทียบกับข้อสรุป']];
+  return[[`ลากเส้นจาก ${As} ไปหา ${Bs} ตามทิศเดียวกันไม่ได้ และจาก ${Bs} ไป ${As} ก็ไม่ได้ (เจอเครื่องหมายกลับทิศคั่นหรือไม่มีตัวเชื่อม)`,'โจทย์'],['ข้อมูลไม่พอยืนยันทั้งสองทาง ตอบ สรุปไม่ได้','เทียบกับข้อสรุป']];
+}
+
+/* problem generator */
+const I2={
+ 1:{nl:[1],len:[4,5],ops:['>','>','≥','='],sum:0,coef:0,cops:['>','<','='],fmt:['tfu'],sumC:0,cks:[1]},
+ 2:{nl:[2],len:[3,4],ops:['>','>','≥','=','<','≤'],sum:0,coef:0,cops:['>','<','≥','≤','=','≠'],fmt:['tfu','tfu','pick'],sumC:0,cks:[1]},
+ 3:{nl:[2,2,3],len:[3,4],ops:['>','≥','=','<','≤','≯','≮'],sum:.4,coef:0,cops:['>','<','≥','≤','=','≠','≯','≮'],fmt:['tfu','pick'],sumC:.2,cks:[1]},
+ 4:{nl:[2],len:[3,4],ops:['>','≥','=','<','≤','≯'],sum:.6,coef:1,cops:['>','<','≥','≤','=','≯','≮'],fmt:['tfu','tfu','pick'],sumC:.4,cks:[1,1,2,0.5]},
+ 5:{nl:[2,3],len:[3,5],ops:['>','≥','=','<','≤','≯','≮'],sum:.7,coef:2,cops:['>','<','≥','≤','≠','≯','≮'],fmt:['tfu','pick'],sumC:.6,cks:[1,2,3,0.5]},
+};
+function genProblem(level){
+  const cf=I2[level];
+  for(let tries=0;tries<60;tries++){
+    const pool=shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ'.split(''));let pi=0;const take=()=>pool[pi++];
+    const nl=rnd(cf.nl),lines=[];const singles=[];
+    for(let li=0;li<nl;li++){
+      const len=ri(cf.len[0],cf.len[1]),atoms=[];
+      const linkPos=li>0?ri(0,len-1):-1;
+      for(let i=0;i<len;i++){
+        if(i===linkPos){const l=rnd(singles);let k=1;if(cf.coef&&Math.random()<.75)k=rnd(cf.coef>1?[0.5,2,1/3,3]:[0.5,2]);atoms.push({node:l,k})}
+        else{const l=take();atoms.push({node:l,k:1})}
+      }
+      if(cf.coef>1&&Math.random()<.4){const i=ri(0,len-1);if(i!==linkPos)atoms[i].k=rnd([2,3])}
+      if(Math.random()<cf.sum){const i=Math.random()<.5?0:len-1;if(i!==linkPos)atoms[i]={node:take()+SUMSEP+take(),k:1}}
+      for(const a of atoms)if(!a.node.includes(SUMSEP)&&!singles.includes(a.node))singles.push(a.node);
+      const ops=[];for(let i=0;i<len-1;i++)ops.push(rnd(cf.ops));
+      lines.push({atoms,ops});
+    }
+    const V=[...new Set(lines.flatMap(l=>l.atoms.flatMap(a=>a.node.split(SUMSEP))))];
+    const P={lines,V};const base=premRows(P,V);
+    if(!lpFeasible(base,V.length))continue;
+    P.base=base;P.E=buildGraph(P);P.singles=singles;P.sums=[...new Set(lines.flatMap(l=>l.atoms.filter(a=>a.node.includes(SUMSEP)).map(a=>a.node)))];
+    return P;
+  }
+  return null;
+}
+function randConcl(P,level){
+  const cf=I2[level],nodes=[...P.singles,...P.sums];
+  const op=rnd(cf.cops);
+  let Lp,Rp;
+  if(Math.random()<cf.sumC&&nodes.length>=3){
+    const n1=ri(2,level>=5?3:2),n2=ri(1,2);
+    Lp=[...Array(n1)].map(()=>({node:rnd(nodes),k:1}));Rp=[...Array(n2)].map(()=>({node:rnd(nodes),k:1}));
+  }else{
+    const u=rnd(nodes);let v=rnd(nodes);if(v===u)v=rnd(nodes);if(v===u)return null;
+    Lp=[{node:u,k:rnd(cf.cks)}];Rp=[{node:v,k:rnd(cf.cks)}];if(Lp[0].k===Rp[0].k&&Lp[0].k!==1)return null;
+  }
+  const Lm=piecesMap(Lp),Rm=piecesMap(Rp);
+  const covers=(A,B)=>Object.keys(B).every(l=>(A[l]||0)>=B[l]-1e-9);
+  if(Lp.length+Rp.length>2&&(covers(Lm,Rm)||covers(Rm,Lm)))return null;
+  if(Object.keys(Lm).every(l=>Math.abs((Lm[l]||0)-(Rm[l]||0))<1e-9)&&Object.keys(Rm).every(l=>Math.abs((Lm[l]||0)-(Rm[l]||0))<1e-9))return null;
+  const text=`${mapStr(Lm)} ${op} ${mapStr(Rm)}`;
+  const v=lpVerdict(P.base,op,Lm,Rm,P.V);
+  const ex=explain(P.E,op,Lp,Rp);
+  if(!ex||ex.v!==v)return null;
+  return{text,v,steps:ex.steps};
+}
+function findConcl(P,level,want,avoid){
+  let any=null;
+  for(let t=0;t<120;t++){const c=randConcl(P,level);if(!c||avoid.has(c.text))continue;if(!want||want.includes(c.v))return c;any=any||c}
+  return want?null:any;
+}
+function genIneq2One(level){
+  for(let t=0;t<30;t++){
+    const P=genProblem(level);if(!P)continue;
+    const lines=P.lines.map(lineStr);
+    const fmt=rnd(I2[level].fmt);
+    if(fmt==='tfu'){
+      const want=rnd(['T','F','U']);const c=findConcl(P,level,[want],new Set());if(!c)continue;
+      return{kind:'ineq2',fmt,lines,text:c.text,choices:TFU.map(a=>LBL[a]),answer:TFU.indexOf(c.v),steps:c.steps};
+    }
+    const avoid=new Set(),T=findConcl(P,level,['T'],avoid);if(!T)continue;avoid.add(T.text);
+    const others=[];for(let i=0;i<3;i++){const o=findConcl(P,level,i===0?['F']:i===1?['U']:['F','U'],avoid);if(!o)break;avoid.add(o.text);others.push(o)}
+    if(others.length<3)continue;
+    const all=shuffle([T,...others]);
+    const steps=[[`ข้อที่ถูกแน่นอนคือ ${T.text}`,'ตรวจทีละตัวเลือก'],...T.steps,...others.map(o=>[`${o.text} → ${LBL[o.v]}`,'ตรวจแบบเดียวกัน'])];
+    return{kind:'ineq2',fmt,lines,text:'ข้อใดสรุปได้ถูกต้องแน่นอน',choices:all.map(c=>c.text),answer:all.indexOf(T),steps,detail:all.map(c=>({text:c.text,v:c.v}))};
+  }
+  return null;
+}
+function genIneq2(level,n){
+  const out=[],seen=new Set();let g=0;
+  while(out.length<n&&g++<n*6){const q=genIneq2One(level);if(q&&!seen.has(q.lines.join('|')+q.text)){seen.add(q.lines.join('|')+q.text);out.push(q)}}
+  return out;
+}
+
+/* ---------- shared multiple-choice builder ---------- */
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const r2=x=>Math.round(x*100)/100;
+const nf=x=>{x=r2(x);return Math.abs(x)>=1000?x.toLocaleString('en-US'):String(x)};
+function mkMC(stem,ans,dist,steps,fmt){
+  fmt=fmt||nf;const seen=new Set([fmt(ans)]),ds=[];
+  for(const d of dist){if(d==null||!isFinite(d))continue;const s=fmt(d);if(!seen.has(s)){seen.add(s);ds.push(s)}if(ds.length===3)break}
+  let k=1;while(ds.length<3){for(const d of [ans+k,ans-k]){const s=fmt(d);if(ds.length<3&&!seen.has(s)){seen.add(s);ds.push(s)}}k++}
+  const choices=shuffle([fmt(ans),...ds]);return{kind:'mc',stem,choices,answer:choices.indexOf(fmt(ans)),steps};
+}
+function mkMCtext(stem,ans,dist,steps){const choices=shuffle([ans,...dist.slice(0,3)]);return{kind:'mc',stem,choices,answer:choices.indexOf(ans),steps}}
+function many(fn,n){const out=[],seen=new Set();let guard=0;while(out.length<n&&guard++<n*40){const q=fn();if(q&&!seen.has(q.stem)){seen.add(q.stem);out.push(q)}}return out}
+
+/* ---------- อนุกรม ---------- */
+const PRIMES=[2,3,5,7,11,13,17];
+const SER_POOL={1:['ar','geo'],2:['ar','geo','sq'],3:['d2','fib','inter','aff','sq'],4:['inter','alt','dgeo','d2','cube'],5:['alt','dgeo','fact','prime','inter','aff']};
+function serRule(kind,level){
+  const t=[];let rule,calc;
+  switch(kind){
+    case 'ar':{const a=ri(1,20)+(level>1?ri(0,30):0),d=level===1?ri(2,9):rnd([-7,-6,-5,-4,4,5,6,7,8,9,11,12]);for(let i=0;i<7;i++)t.push(a+i*d);
+      rule=`ผลต่างของตัวที่ติดกันคงที่ แต่ละตัว${d>0?'บวก '+d:'ลบ '+(-d)}`;calc=i=>`${t[i-1]} ${d>0?'+ '+d:'− '+(-d)} = ${t[i]}`;break}
+    case 'geo':{const a=ri(1,5),r=level===1?rnd([2,3]):rnd([2,3,4]);for(let i=0;i<7;i++)t.push(a*r**i);rule=`แต่ละตัวคูณ ${r}`;calc=i=>`${t[i-1]} × ${r} = ${t[i]}`;break}
+    case 'sq':{const n0=ri(1,6),cc=level>=2?rnd([0,0,1,-1,2]):0;for(let i=0;i<7;i++)t.push((n0+i)**2+cc);
+      rule=`เป็นกำลังสองเรียงกัน ${n0}², ${n0+1}², ${n0+2}², …${cc?` แล้ว${cc>0?'บวก '+cc:'ลบ '+(-cc)}`:''}`;calc=i=>`${n0+i}² ${cc?(cc>0?'+ '+cc:'− '+(-cc)):''} = ${t[i]}`;break}
+    case 'd2':{const a=ri(1,15),d0=ri(1,5),e=ri(1,4);t.push(a);for(let i=1;i<7;i++)t.push(t[i-1]+d0+(i-1)*e);
+      rule=`ผลต่างคือ ${d0}, ${d0+e}, ${d0+2*e}, … เพิ่มขึ้นทีละ ${e}`;calc=i=>`${t[i-1]} + ${d0+(i-1)*e} = ${t[i]}`;break}
+    case 'fib':{t.push(ri(1,5),ri(1,6));for(let i=2;i<7;i++)t.push(t[i-1]+t[i-2]);rule='แต่ละตัวเท่ากับสองตัวก่อนหน้าบวกกัน';calc=i=>`${t[i-2]} + ${t[i-1]} = ${t[i]}`;break}
+    case 'inter':{const a1=ri(1,20),d1=ri(2,7),a2=ri(20,60),d2=rnd([-5,-4,-3,3,4,5,6]);for(let i=0;i<7;i++)t.push(i%2===0?a1+(i/2)*d1:a2+((i-1)/2)*d2);
+      rule=`แยกเป็น 2 ชุดสลับกัน ตำแหน่งคี่บวก ${d1} ทุกครั้ง ตำแหน่งคู่${d2>0?'บวก '+d2:'ลบ '+(-d2)} ทุกครั้ง`;calc=i=>{const d=i%2===0?d1:d2;return `${t[i-2]} ${d>0?'+ '+d:'− '+(-d)} = ${t[i]} (ดูตัวที่อยู่ห่างกัน 2 ตำแหน่ง)`};break}
+    case 'aff':{const m=rnd([2,3]),cc=rnd([1,-1,2,3]);t.push(ri(2,5));for(let i=1;i<7;i++)t.push(t[i-1]*m+cc);
+      rule=`แต่ละตัว = ตัวก่อนหน้า × ${m} ${cc>0?'+ '+cc:'− '+(-cc)}`;calc=i=>`${t[i-1]} × ${m} ${cc>0?'+ '+cc:'− '+(-cc)} = ${t[i]}`;break}
+    case 'alt':{const p=ri(1,5),q=rnd([2,3]);t.push(ri(1,9));for(let i=1;i<7;i++)t.push(i%2===1?t[i-1]+p:t[i-1]*q);
+      rule=`ทำสลับกัน บวก ${p} แล้วคูณ ${q} ไปเรื่อยๆ`;calc=i=>i%2===1?`${t[i-1]} + ${p} = ${t[i]}`:`${t[i-1]} × ${q} = ${t[i]}`;break}
+    case 'dgeo':{const a=ri(1,10),d=ri(1,3),r=rnd([2,3]);t.push(a);for(let i=1;i<7;i++)t.push(t[i-1]+d*r**(i-1));
+      rule=`ผลต่างคือ ${d}, ${d*r}, ${d*r*r}, … คูณ ${r} ทุกครั้ง`;calc=i=>`${t[i-1]} + ${d*r**(i-1)} = ${t[i]}`;break}
+    case 'cube':{const n0=ri(1,4);for(let i=0;i<7;i++)t.push((n0+i)**3);rule=`เป็นกำลังสามเรียงกัน ${n0}³, ${n0+1}³, ${n0+2}³, …`;calc=i=>`${n0+i}³ = ${t[i]}`;break}
+    case 'fact':{t.push(ri(1,3));for(let i=1;i<7;i++)t.push(t[i-1]*(i+1));rule='แต่ละตัวคูณด้วยเลขที่เพิ่มขึ้น × 2, × 3, × 4, …';calc=i=>`${t[i-1]} × ${i+1} = ${t[i]}`;break}
+    case 'prime':{t.push(ri(1,20));for(let i=1;i<7;i++)t.push(t[i-1]+PRIMES[i-1]);rule='ผลต่างเป็นจำนวนเฉพาะเรียงกัน 2, 3, 5, 7, 11, …';calc=i=>`${t[i-1]} + ${PRIMES[i-1]} = ${t[i]}`;break}
+  }
+  return{t,rule,calc};
+}
+function genSeries1(level){
+  const kind=rnd(SER_POOL[level]),{t,rule,calc}=serRule(kind,level);
+  if(t.some(v=>Math.abs(v)>99999))return null;
+  const missing=level>=4&&Math.random()<.35&&kind!=='fib';
+  let shown,idx;
+  if(missing){idx=ri(2,4);shown=t.slice(0,6).map((v,i)=>i===idx?'?':v)}else{idx=5;shown=[...t.slice(0,5),'?']}
+  const ans=t[idx],prev=t[idx-1],pp=t[idx-2];
+  const naive=prev+(prev-pp);
+  return mkMC(`จงหาจำนวนที่แทน ?\n${shown.join(',  ')}`,ans,shuffle([naive,ans+(ans-prev),ans+1,ans-1,ans+2,ans-2]).sort((a,b)=>(b===naive)-(a===naive)),
+    [[rule,'ดูความสัมพันธ์ของตัวที่ติดกัน'],[`จำนวนที่หายไป: ${calc(idx)}`,'ใช้กฎในข้อ 1']]);
+}
+
+/* ---------- คณิตศาสตร์ทั่วไป ---------- */
+const MATH_POOL={1:['pct','disc','speed'],2:['pct','disc','profit','speed','ratio'],3:['profit','avg','ratio','work','interest'],4:['profit','age','work','updown','avg'],5:['age','updown','pctpct','work','profit']};
+const WORK=[[3,6],[4,12],[6,12],[10,15],[12,24],[20,30],[12,4],[8,24],[5,20],[9,18],[15,10],[30,20]];
+const pf=x=>nf(x)+'%',bf=x=>nf(x)+' บาท',df=x=>nf(x)+' วัน',yf=x=>nf(x)+' ปี',kf=x=>nf(x)+' กม.';
+function genMath1(level){
+  switch(rnd(MATH_POOL[level])){
+    case 'pct':{const x=rnd([5,10,15,20,25,30,40,50,60,75]),N=20*ri(2,100),a=N*x/100;
+      return mkMC(`${x}% ของ ${nf(N)} มีค่าเท่าใด`,a,[N*x/10,N*(100-x)/100,a+x],[[`${x}% คือ ${x} ส่วนใน 100`,'ความหมายของร้อยละ'],[`${nf(N)} × ${x} ÷ 100 = ${nf(a)}`,'ข้อ 1']])}
+    case 'disc':{const P=100*ri(2,50),x=rnd([10,15,20,25,30,40]),off=P*x/100,a=P-off;
+      return mkMC(`สินค้าราคา ${nf(P)} บาท ลดราคา ${x}% ต้องจ่ายกี่บาท`,a,[off,P-x,P+off],[[`ส่วนลด = ${nf(P)} × ${x} ÷ 100 = ${nf(off)} บาท`,'ร้อยละของราคาเต็ม'],[`จ่ายจริง = ${nf(P)} − ${nf(off)} = ${nf(a)} บาท`,'ราคาเต็มลบส่วนลด']],bf)}
+    case 'profit':{const C=20*ri(5,50),p=rnd([10,20,25,30,40,50]),S=C*(100+p)/100;
+      return mkMC(`ซื้อของมา ${nf(C)} บาท ขายไป ${nf(S)} บาท ได้กำไรกี่เปอร์เซ็นต์`,p,[(S-C)/S*100,p+10,p/2],[[`กำไร = ${nf(S)} − ${nf(C)} = ${nf(S-C)} บาท`,'ราคาขายลบราคาทุน'],[`คิดเป็นร้อยละของทุน = ${nf(S-C)} ÷ ${nf(C)} × 100 = ${p}%`,'กำไรขาดทุนคิดเทียบกับทุนเสมอ']],pf)}
+    case 'speed':{const v=10*ri(4,10),t=rnd([1.5,2,2.5,3,4]),a=v*t;
+      return mkMC(`รถวิ่งด้วยความเร็ว ${v} กม./ชม. เป็นเวลา ${t} ชั่วโมง ได้ระยะทางกี่กิโลเมตร`,a,[v/t,v+t,v*(t+1)],[['ระยะทาง = ความเร็ว × เวลา','สูตรความเร็ว'],[`${v} × ${t} = ${nf(a)} กม.`,'ข้อ 1']],kf)}
+    case 'avg':{const m=ri(20,80),xs=[0,0,0,0].map(()=>ri(m-20,m+20)),s4=xs.reduce((a,b)=>a+b,0),a=5*m-s4;if(a<=0||a>200)return null;
+      return mkMC(`ค่าเฉลี่ยของจำนวน 5 จำนวนเท่ากับ ${m} ถ้า 4 จำนวนแรกคือ ${xs.join(', ')} จำนวนที่ 5 คือเท่าใด`,a,[m,Math.round(s4/4),a+5],[[`ผลรวมทั้ง 5 จำนวน = ${m} × 5 = ${5*m}`,'ค่าเฉลี่ย × จำนวนตัว'],[`ผลรวม 4 จำนวนแรก = ${s4}`,'บวกจำนวนที่โจทย์ให้'],[`จำนวนที่ 5 = ${5*m} − ${s4} = ${a}`,'ข้อ 1 ลบข้อ 2']])}
+    case 'ratio':{let a=ri(1,7),b=ri(1,7);if(a===b)b=a+1;const u=10*ri(2,30),T=(a+b)*u,ans=a*u;
+      return mkMC(`แบ่งเงิน ${nf(T)} บาท ให้ ก และ ข ในอัตราส่วน ${a} : ${b} ก ได้เงินกี่บาท`,ans,[b*u,T/a,T*a/b],[[`รวมทั้งหมด ${a} + ${b} = ${a+b} ส่วน`,'บวกตัวเลขในอัตราส่วน'],[`1 ส่วน = ${nf(T)} ÷ ${a+b} = ${nf(u)} บาท`,'เงินทั้งหมดหารจำนวนส่วน'],[`ก ได้ ${a} ส่วน = ${a} × ${nf(u)} = ${nf(ans)} บาท`,'ข้อ 2']],bf)}
+    case 'work':{const [a,b]=rnd(WORK),ans=a*b/(a+b);
+      return mkMC(`ก ทำงานชิ้นหนึ่งเสร็จใน ${a} วัน ข ทำงานเดียวกันเสร็จใน ${b} วัน ถ้าช่วยกันทำจะเสร็จในกี่วัน`,ans,[(a+b)/2,a+b,Math.abs(a-b)],[[`ใน 1 วัน ก ทำได้ 1/${a} ของงาน ข ทำได้ 1/${b} ของงาน`,'ทำเสร็จใน n วัน = วันละ 1/n'],[`ช่วยกัน 1 วันได้ 1/${a} + 1/${b} = ${a+b}/${a*b} ของงาน`,'บวกเศษส่วน'],[`งานทั้งหมดเสร็จใน ${a*b} ÷ ${a+b} = ${nf(ans)} วัน`,'กลับเศษเป็นส่วน']],df)}
+    case 'interest':{const P=1000*ri(1,50),r=rnd([2,3,4,5,6,8]),t=rnd([2,3,4,5]),y1=P*r/100,a=y1*t;
+      return mkMC(`ฝากเงิน ${nf(P)} บาท ได้ดอกเบี้ยเชิงเดียว ${r}% ต่อปี เป็นเวลา ${t} ปี ได้ดอกเบี้ยรวมกี่บาท`,a,[y1,a+P,a*10],[[`ดอกเบี้ย 1 ปี = ${nf(P)} × ${r} ÷ 100 = ${nf(y1)} บาท`,'ร้อยละต่อปี'],[`${t} ปี = ${nf(y1)} × ${t} = ${nf(a)} บาท`,'ดอกเบี้ยเชิงเดียวคูณจำนวนปีได้เลย']],bf)}
+    case 'age':{const S=ri(5,15),k=rnd([2,3]),n=ri(2,10),d=(k-1)*(S+n);
+      return mkMC(`ปัจจุบันพ่ออายุมากกว่าลูก ${d} ปี อีก ${n} ปีข้างหน้าพ่อจะมีอายุเป็น ${k} เท่าของลูก ปัจจุบันลูกอายุกี่ปี`,S,[S+n,S+k,S-2],[[`ให้ลูกอายุ x ปี พ่ออายุ x + ${d} ปี`,'โจทย์บอกพ่อมากกว่าลูก '+d+' ปี'],[`อีก ${n} ปี: x + ${d+n} = ${k} × (x + ${n})`,'ทั้งคู่อายุเพิ่ม '+n+' ปีเท่ากัน'],[`x + ${d+n} = ${k}x + ${k*n} ย้ายข้างได้ ${d+n-k*n} = ${k-1}x ดังนั้น x = ${S}`,'แก้สมการ']],yf)}
+    case 'updown':{const x=rnd([10,20,25,30,40,50]),up=100+x,cut=up*x/100,fin=up-cut,loss=100-fin;
+      return mkMCtext(`ราคาสินค้าเพิ่มขึ้น ${x}% แล้วลดลง ${x}% ราคาสุดท้ายเทียบกับราคาเดิมเป็นอย่างไร`,`ลดลง ${nf(loss)}%`,shuffle(['เท่าเดิม',`ลดลง ${x}%`,`เพิ่มขึ้น ${nf(loss)}%`]),[[`สมมติราคาเดิม 100 บาท เพิ่ม ${x}% เป็น ${up} บาท`,'ใช้ 100 เพื่อให้อ่านเป็นร้อยละได้ทันที'],[`ลด ${x}% ของ ${up} คือ ${nf(cut)} บาท เหลือ ${nf(fin)} บาท`,'การลดคิดจากราคาใหม่ ไม่ใช่ราคาเดิม'],[`เทียบกับ 100 บาท ลดลง ${nf(loss)}%`,'เทียบกับราคาเดิม']])}
+    case 'pctpct':{const x=rnd([10,20,25,40,50]),y=rnd([10,20,25,40,50]),N=400*ri(1,10),m=N*y/100,a=m*x/100;
+      return mkMC(`${x}% ของ ${y}% ของ ${nf(N)} เท่ากับเท่าใด`,a,[N*(x+y)/100,N*x/100,a*10],[[`${y}% ของ ${nf(N)} = ${nf(m)}`,'คิดจากด้านในสุดก่อน'],[`${x}% ของ ${nf(m)} = ${nf(a)}`,'ข้อ 1']])}
+  }
+}
+
+/* ---------- เงื่อนไขภาษา ---------- */
+const NOUNS=['แมว','นก','ปากกา','ต้นไม้','ครู','ดอกไม้','หนังสือ','ปลา','นักร้อง','ผลไม้','ทหาร','รถ','ดินสอ','นักเรียน','ช้าง','เพชร'];
+const LG_TYPES={1:['all'],2:['all','all','some'],3:['all','some','none'],4:['all','some','none'],5:['all','some','none','someNot']};
+const say={all:(X,Y)=>`ทุก${X}เป็น${Y}`,some:(X,Y)=>`${X}บางส่วนเป็น${Y}`,none:(X,Y)=>`ไม่มี${X}ใดเป็น${Y}`,someNot:(X,Y)=>`${X}บางส่วนไม่เป็น${Y}`};
+function holds(type,x,y,m){
+  const both=m.some(r=>(r>>x&1)&&(r>>y&1)),xNotY=m.some(r=>(r>>x&1)&&!(r>>y&1));
+  return type==='all'?!xNotY:type==='some'?both:type==='none'?!both:xNotY;
+}
+function genLogic1(level){
+  const ns=level>=4?4:3,names=shuffle([...NOUNS]).slice(0,ns),types=LG_TYPES[level];
+  const prem=[];for(let i=0;i<ns-1;i++){const t=rnd(types),flip=Math.random()<.5;prem.push({t,x:flip?i+1:i,y:flip?i:i+1})}
+  const R=(1<<ns)-1,valid=[];
+  for(let mask=1;mask<(1<<R);mask++){
+    const m=[];for(let r=1;r<=R;r++)if(mask>>(r-1)&1)m.push(r);
+    let ok=true;for(let s=0;s<ns&&ok;s++)if(!m.some(r=>r>>s&1))ok=false;
+    if(ok&&prem.every(p=>holds(p.t,p.x,p.y,m)))valid.push(m);
+  }
+  if(!valid.length)return null;
+  const A=0,Z=ns-1,cands=[];
+  for(const [x,y] of [[A,Z],[Z,A]])for(const t of ['all','some','none','someNot']){
+    const res=valid.map(m=>holds(t,x,y,m)),st=res.every(Boolean)?'T':res.some(Boolean)?'U':'F';
+    cands.push({text:say[t](names[x],names[y]),st});
+  }
+  const T=cands.filter(c=>c.st==='T'),N=shuffle(cands.filter(c=>c.st!=='T')),NONE='ไม่มีข้อใดสรุปได้แน่นอน';
+  if(N.length<3)return null;
+  let correct,dist;
+  if(T.length){correct=rnd(T).text;dist=N.slice(0,3).map(c=>c.text);if(level>=3&&Math.random()<.3)dist[2]=NONE}
+  else{if(level<=2&&Math.random()<.6)return null;correct=NONE;dist=N.slice(0,3).map(c=>c.text)}
+  const stem=`กำหนดให้\n${prem.map(p=>'• '+say[p.t](names[p.x],names[p.y])).join('\n')}\nข้อใดสรุปได้ถูกต้องแน่นอน`;
+  const lab={T:'จริงเสมอ ไม่ว่าจะวาดวงกลมแบบใด',F:'ขัดกับเงื่อนไข',U:'เป็นไปได้ทั้งจริงและไม่จริง จึงสรุปไม่ได้'};
+  const steps=[[`วาดวงกลมแทน ${names.join(', ')} แล้วลองจัดวางทุกแบบที่ไม่ขัดกับเงื่อนไข`,'เงื่อนไขในโจทย์'],
+    ...[correct,...dist].filter(t=>t!==NONE).map(t=>{const c0=cands.find(c=>c.text===t);return[`${t}: ${lab[c0.st]}`,'ตรวจกับทุกแบบที่วาดได้']}),
+    ...(correct===NONE?[['ไม่มีข้อสรุปใดจริงเสมอ คำตอบจึงเป็น ไม่มีข้อใดสรุปได้แน่นอน','ข้อก่อนหน้า']]:[])];
+  return mkMCtext(stem,correct,dist,steps);
+}
+const LOCAL={series:(l,n)=>many(()=>genSeries1(l),n),math:(l,n)=>many(()=>genMath1(l),n),logic:(l,n)=>many(()=>genLogic1(l),n)};
+
+/* ---------- AI connection ---------- */
+let SAMPLE=null,aiReady=false,R=null,genCtl=null;
+const inViewer=!!window.claude;
+let AIP={provider:'auto',gemini:{key:'',model:'gemini-flash-latest'},openai:{key:'',model:'gpt-5-mini'}};
+try{const a=JSON.parse(localStorage.getItem('exam-drill-ai')||'null');if(a)AIP={...AIP,...a,gemini:{...AIP.gemini,...(a.gemini||{})},openai:{...AIP.openai,...(a.openai||{})}}}catch(e){}
+const saveAI=()=>{try{localStorage.setItem('exam-drill-ai',JSON.stringify(AIP))}catch(e){}};
+const AINAME={claude:'Claude',gemini:'Gemini',openai:'OpenAI'};
+function activeAI(){
+  if(inViewer)return SAMPLE?'claude':null;
+  const p=AIP.provider;
+  if(p==='auto')return AIP.gemini.key?'gemini':AIP.openai.key?'openai':null;
+  return AIP[p]&&AIP[p].key?p:null;
+}
+function normTurns(input){
+  const arr=typeof input==='string'?[{role:'user',content:input}]:input,out=[];
+  for(const t of arr){const r=t.role==='assistant'?'assistant':'user';if(out.length&&out[out.length-1].role===r)out[out.length-1].content+='\n\n'+t.content;else out.push({role:r,content:t.content})}
+  return out;
+}
+async function httpFail(res){
+  let msg='';try{msg=await res.text()}catch(e){}
+  const bad=res.status===401||res.status===403||(res.status===400&&/API[_ ]?key/i.test(msg));
+  throw{code:bad?'bad_key':res.status===404?'bad_model':res.status===429?'rate_limited':(res.status>=500||/overloaded|high demand|UNAVAILABLE/i.test(msg))?'overloaded':'upstream_error',message:msg.slice(0,300)};
+}
+const GEMINI_FALLBACK=['gemini-flash-latest','gemini-2.5-flash','gemini-flash-lite-latest','gemini-2.5-flash-lite'];
+let LAST_MODEL='';
+const sleep=(ms,signal)=>new Promise((ok,no)=>{const t=setTimeout(ok,ms);if(signal)signal.addEventListener('abort',()=>{clearTimeout(t);no({code:'cancelled'})},{once:true})});
+async function keyCall(prov,input,json,signal){
+  const models=prov==='gemini'?[AIP.gemini.model,...GEMINI_FALLBACK.filter(m=>m!==AIP.gemini.model)]:[AIP.openai.model];
+  let lastErr;
+  for(const model of models){
+    for(let attempt=0;attempt<3;attempt++){
+      try{const t=await keyCallOnce(prov,model,input,json,signal);LAST_MODEL=model;return t}
+      catch(e){lastErr=e;
+        if(e.code==='overloaded'||e.code==='network'&&attempt===0){await sleep(1500*(attempt+1),signal);continue}
+        if(e.code==='bad_model'||(e.code==='rate_limited'&&prov==='gemini'))break;
+        throw e;
+      }
+    }
+  }
+  throw lastErr;
+}
+async function keyCallOnce(prov,model,input,json,signal){
+  const turns=normTurns(input);let res;
+  try{
+    if(prov==='gemini'){
+      res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',signal,
+        headers:{'Content-Type':'application/json','x-goog-api-key':AIP.gemini.key},
+        body:JSON.stringify({contents:turns.map(t=>({role:t.role==='assistant'?'model':'user',parts:[{text:t.content}]})),...(json?{generationConfig:{responseMimeType:'application/json'}}:{})})});
+    }else{
+      res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+AIP.openai.key},
+        body:JSON.stringify({model,messages:turns,...(json?{response_format:{type:'json_object'}}:{})})});
+    }
+  }catch(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};throw{code:'network',message:String(e)}}
+  if(!res.ok)await httpFail(res);
+  const d=await res.json();
+  const text=prov==='gemini'?((d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[]).map(x=>x.text||'').join(''):(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
+  if(!text.trim())throw{code:'empty_completion'};
+  return text;
+}
+function looseJSON(t){
+  try{return JSON.parse(t)}catch(e){}
+  const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}
+  const a=Math.min(...['{','['].map(ch=>{const i=t.indexOf(ch);return i<0?Infinity:i})),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));
+  if(isFinite(a)&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}
+  throw{code:'invalid_json',text:t};
+}
+async function aiText(input,{signal,onText}={}){
+  const p=activeAI();if(!p)throw{code:'no_ai'};
+  if(p==='claude')return(await SAMPLE(input,{cache:false,signal,onText})).text;
+  const t=await keyCall(p,input,false,signal);if(onText)onText({text:t});return t;
+}
+async function aiJSON(input,{signal,onText}={}){
+  const p=activeAI();if(!p)throw{code:'no_ai'};
+  if(p==='claude')return SAMPLE.json(input,{cache:false,signal,onText});
+  const t=await keyCall(p,input,true,signal);if(onText)onText({text:t});return looseJSON(t);
+}
+const HIDE_CODES=['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'];
+function errCopy(code,what){
+  return code==='rate_limited'?`${what}ถี่เกินไปหรือโควตาหมด รอสักครู่แล้วลองใหม่`:code==='bad_key'?'API key ไม่ถูกต้องหรือไม่มีสิทธิ์ ตรวจในตั้งค่า AI':code==='bad_model'?'ไม่พบชื่อโมเดลนี้ แก้ชื่อโมเดลในตั้งค่า AI':code==='overloaded'?'เซิร์ฟเวอร์ AI มีคนใช้เยอะชั่วคราว ระบบลองซ้ำและลองโมเดลสำรองแล้วยังไม่ได้ รอสักครู่แล้วลองใหม่':code==='network'?'เชื่อมต่อผู้ให้บริการ AI ไม่ได้ ตรวจอินเทอร์เน็ต':code==='session_expired'?'กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง':code==='invalid_json'?'ได้โจทย์ไม่ครบ ลองลดจำนวนข้อแล้วสร้างใหม่':(code==='refused'||code==='empty_completion')?'AI ไม่ตอบข้อนี้ ลองใหม่อีกครั้ง':`${what}ไม่สำเร็จ ลองใหม่อีกครั้ง`;
+}
+function renderAISet(){
+  const pill=document.getElementById('aipill'),body=document.getElementById('aibody');if(!pill||!body)return;
+  const a=activeAI();pill.textContent=a?AINAME[a]:'ยังไม่ตั้ง';
+  if(inViewer){body.innerHTML=`<p class="hint">เปิดผ่าน Claude อยู่ ระบบใช้ Claude ของบัญชีคุณโดยอัตโนมัติ</p><p class="hint">Gemini และ OpenAI ใช้ได้เมื่อเปิดจากไฟล์ exam-practice.html ในเครื่อง เพราะหน้าที่เปิดใน Claude เชื่อมต่อเว็บอื่นไม่ได้</p>`;return}
+  const g=AIP.gemini,o=AIP.openai;
+  body.innerHTML=`<div class="field"><label for="aiprov">ใช้ AI จาก</label><select id="aiprov"><option value="auto">อัตโนมัติ (ตัวที่มี key)</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select></div>
+   <div class="field"><label for="gkey">Gemini API key</label><input class="tx" id="gkey" type="password" autocomplete="off" placeholder="วาง key ที่นี่ (ขึ้นต้น AIza)"><a class="klink" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">สร้าง Gemini key ↗</a></div>
+   <div class="field"><label for="gmodel">โมเดล Gemini</label><input class="tx" id="gmodel" type="text" autocomplete="off"></div>
+   <div class="field"><label for="okey">OpenAI API key</label><input class="tx" id="okey" type="password" autocomplete="off" placeholder="sk-..."><a class="klink" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">สร้าง OpenAI key ↗</a></div>
+   <div class="field"><label for="omodel">โมเดล OpenAI</label><input class="tx" id="omodel" type="text" autocomplete="off"></div>
+   <div class="btns"><button class="primary" id="aisave">บันทึก</button><button class="ghost" id="aitest">ทดสอบ</button><button class="ghost" id="aiclear">ลบ key</button></div>
+   <p class="hint" id="aistat"></p>
+   <details class="howto"><summary>วิธีขอ Gemini key (มีโควตาฟรี)</summary><ol>
+<li>กดลิงก์ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> แล้วเข้าสู่ระบบด้วยบัญชี Google</li>
+<li>ครั้งแรกจะมีหน้าข้อตกลงการใช้งาน ให้กดยอมรับ</li>
+<li>กดปุ่ม <b>Create API key</b> (สร้างคีย์ API) ถ้าถามโปรเจกต์ ให้เลือกโปรเจกต์ที่มีหรือให้ระบบสร้างใหม่</li>
+<li>คัดลอก key ที่ได้ (ขึ้นต้นด้วย AIza) มาวางในช่อง Gemini API key</li>
+<li>กด บันทึก แล้วกด ทดสอบ</li>
+</ol><p class="hint">แบบฟรีมีจำกัดจำนวนครั้งต่อวัน และ Google อาจนำข้อมูลที่ส่งไปใช้ปรับปรุงบริการ ถ้าไม่ต้องการให้เปิดการเรียกเก็บเงินในโปรเจกต์</p></details>
+<details class="howto"><summary>วิธีขอ OpenAI key (ต้องเติมเงิน)</summary><ol>
+<li>กดลิงก์ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> แล้วเข้าสู่ระบบ ใช้บัญชีเดียวกับ ChatGPT ได้ แต่ค่าใช้จ่ายแยกกัน แพ็กเกจ ChatGPT Plus ใช้กับ API ไม่ได้</li>
+<li>ไปที่ <b>Settings → Billing</b> เพิ่มบัตรและเติมเครดิตก่อน ไม่อย่างนั้น key จะใช้ไม่ได้</li>
+<li>กลับมาหน้า API keys กด <b>Create new secret key</b> ตั้งชื่อ เช่น ซ้อมสอบ แล้วกดสร้าง</li>
+<li>คัดลอก key (ขึ้นต้นด้วย sk-) ทันที เพราะระบบจะให้ดูได้ครั้งเดียว แล้ววางในช่อง OpenAI API key</li>
+<li>กด บันทึก แล้วกด ทดสอบ</li>
+</ol></details>
+<p class="hint">key ถูกเก็บไว้ในเบราว์เซอร์ของเครื่องนี้เท่านั้น อย่าใช้ในเครื่องสาธารณะ และอย่าส่ง key ให้คนอื่น ค่าใช้จ่ายคิดกับบัญชีของ key นั้น</p>`;
+  const $=id=>document.getElementById(id);
+  $('aiprov').value=AIP.provider;$('gkey').value=g.key;$('gmodel').value=g.model;$('okey').value=o.key;$('omodel').value=o.model;
+  const read=()=>{AIP.provider=$('aiprov').value;AIP.gemini={key:$('gkey').value.trim(),model:$('gmodel').value.trim()||'gemini-flash-latest'};AIP.openai={key:$('okey').value.trim(),model:$('omodel').value.trim()||'gpt-5-mini'}};
+  const stat=(t,c)=>{const e=$('aistat');e.textContent=t;e.className='hint '+(c||'')};
+  $('aisave').onclick=()=>{read();saveAI();renderAISet();aiChanged();document.getElementById('aistat').textContent=activeAI()?`บันทึกแล้ว ใช้ ${AINAME[activeAI()]}`:'บันทึกแล้ว แต่ยังไม่มี key ที่ใช้ได้'};
+  $('aiclear').onclick=()=>{AIP.gemini.key='';AIP.openai.key='';saveAI();renderAISet();aiChanged();document.getElementById('aistat').textContent='ลบ key แล้ว'};
+  $('aitest').onclick=async()=>{read();saveAI();const a2=activeAI();if(!a2){stat('ยังไม่มี key ให้ทดสอบ','err');return}
+    stat(`กำลังทดสอบ ${AINAME[a2]}...`);
+    try{const t=await aiText('ตอบกลับคำว่า พร้อม เพียงคำเดียว');stat(`${AINAME[a2]} ใช้งานได้ (โมเดล ${LAST_MODEL}) ตอบว่า: ${t.trim().slice(0,40)}`,'ok');renderAISetPill();aiChanged()}
+    catch(e){stat(errCopy(e&&e.code,'ทดสอบ')+(e&&e.message?` (${String(e.message).slice(0,120)})`:''),'err')}};
+}
+function renderAISetPill(){const a=activeAI(),p=document.getElementById('aipill');if(p)p.textContent=a?AINAME[a]:'ยังไม่ตั้ง'}
+function aiChanged(){document.querySelectorAll('.askbox').forEach(b=>b.hidden=!activeAI());if(R&&(R.status==='needai'||R.status==='idle'||R.status==='empty')){R.status=(activeAI()||bankOn())?'idle':'needai';render()}}
+(async()=>{try{if(window.claude&&window.claude.use){SAMPLE=await window.claude.use('sample')}}catch(e){}aiReady=true;renderAISet();aiChanged()})();
+
+function genPrompt(s,level,n){
+  const weak=(P.weak[s.id]||[]).slice(-5);
+  return `สร้างข้อสอบใหม่ ${n} ข้อ วิชา "${s.name}" (${s.desc}) แนวข้อสอบความรู้ความสามารถทั่วไป ก.พ. และสอบราชการไทย
+ระดับความยาก ${level} จาก 5: ${LEVEL_TXT[level]}
+รหัสชุด ${Math.random().toString(36).slice(2,8)} (ใช้เพื่อให้โจทย์ไม่ซ้ำกับชุดก่อน)
+${weak.length?`ผู้ทำเคยตอบผิดในโจทย์แนวนี้ ให้มีโจทย์แนวคล้ายกันปนอยู่ 2–3 ข้อ (เปลี่ยนตัวเลขและเนื้อหา):\n- ${weak.join('\n- ')}\n`:''}
+กติกา:
+- ทุกข้อมีตัวเลือก 4 ตัว ถูกเพียงตัวเดียว คละตำแหน่งคำตอบที่ถูก
+- คิดคำตอบให้ถูกต้องแน่นอน ตรวจคำนวณซ้ำก่อนส่ง ห้ามมีข้อที่กำกวม
+- ${s.id==='eng'?'โจทย์และตัวเลือกเป็นภาษาอังกฤษ ส่วนเฉลยอธิบายเป็นภาษาไทย':'ใช้ภาษาไทยทั้งหมด'}
+- เฉลยแต่ละข้อมี 2–4 ขั้น สั้น ภาษาง่าย ห้ามข้ามขั้น แต่ละขั้นบอกที่มา (from) เช่น "โจทย์บอก" หรือ "คูณ 2 ทั้งสองข้าง"
+- ห้ามใช้ markdown ในข้อความ ไม่ต้องใส่ ก ข ค ง หน้าตัวเลือก
+ตอบเป็น JSON เท่านั้น รูปแบบ:
+{"questions":[{"stem":"โจทย์","choices":["ตัวเลือก1","ตัวเลือก2","ตัวเลือก3","ตัวเลือก4"],"answer":0,"steps":[{"text":"ขั้นอธิบาย","from":"ที่มา"}]}]}`;
+}
+/* ---------- shared question bank (Supabase; hosted page / offline file only) ---------- */
+const BANK={url:'',key:''}; /* ใส่ Project URL และ anon public key ของ Supabase ที่นี่ */
+const bankOn=()=>!inViewer&&!!BANK.url&&!!BANK.key;
+let SEEN={};try{SEEN=JSON.parse(localStorage.getItem('exam-drill-seen')||'{}')||{}}catch(e){}
+const saveSeen=()=>{try{localStorage.setItem('exam-drill-seen',JSON.stringify(SEEN))}catch(e){}};
+async function bankRPC(fn,args,signal){
+  const res=await fetch(`${BANK.url.replace(/\/$/,'')}/rest/v1/rpc/${fn}`,{method:'POST',signal,headers:{'Content-Type':'application/json',apikey:BANK.key,Authorization:'Bearer '+BANK.key},body:JSON.stringify(args)});
+  if(!res.ok)throw{code:'bank',message:(await res.text().catch(()=>'')).slice(0,200)};
+  const t=await res.text();return t?JSON.parse(t):null;
+}
+function toBankItem(q){return{stem:q.stem,choices:q.choices,answer:q.answer,steps:q.steps.map(([text,from])=>({text,from}))}}
+function shuffleChoices(q){const idx=shuffle(q.choices.map((_,i)=>i));return{...q,choices:idx.map(i=>q.choices[i]),answer:idx.indexOf(q.answer)}}
+async function bankPick(subject,level,n,signal){
+  const rows=await bankRPC('pick_questions',{p_subject:subject,p_level:level,p_n:n,p_exclude:(SEEN[subject]||[]).slice(-300)},signal)||[];
+  const out=[];for(const r of rows){const c=cleanAI([r.q]);if(c.length)out.push({...shuffleChoices(c[0]),bid:r.id,uses:r.uses||0,ok:r.correct||0,src:'bank'})}
+  return out;
+}
+async function bankAdd(subject,level,items){
+  try{const ids=await bankRPC('add_questions',{p_subject:subject,p_level:level,p_items:items.map(toBankItem)});if(Array.isArray(ids))items.forEach((q,i)=>{const id=ids[i]&&(ids[i].add_questions||ids[i]);if(typeof id==='string')q.bid=id})}catch(e){}
+}
+function bankRecord(items,picks){
+  if(!bankOn())return;const ids=[],ok=[];
+  items.forEach((q,j)=>{if(q.bid&&picks[j]!=null){ids.push(q.bid);ok.push(picks[j]===q.answer)}});
+  if(ids.length)bankRPC('record_answers',{p_ids:ids,p_correct:ok}).catch(()=>{});
+  const sid=R.subject;SEEN[sid]=[...(SEEN[sid]||[]),...ids].slice(-500);saveSeen();
+}
+function cleanAI(data){
+  const arr=Array.isArray(data)?data:(data&&Array.isArray(data.questions)?data.questions:[]);
+  return arr.filter(q=>q&&typeof q.stem==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&Number.isInteger(q.answer)&&q.answer>=0&&q.answer<q.choices.length)
+   .map(q=>({kind:'mc',stem:q.stem,choices:q.choices.slice(0,5).map(String),answer:q.answer,steps:(Array.isArray(q.steps)?q.steps:[]).map(s=>typeof s==='string'?[s,'']:[String(s.text||''),String(s.from||'')]).filter(s=>s[0])}));
+}
+
+/* ---------- round ---------- */
+function subj(){return SUBJ.find(s=>s.id===P.subject)||SUBJ[0]}
+async function start(go){
+  if(genCtl){genCtl.abort();genCtl=null}
+  const s=subj(),level=lvOf(s.id),n=P.count;
+  R={subject:s.id,level,mode:P.mode,items:[],picks:[],i:0,status:'loading',go:go===true};
+  if(!s.ai){R.items=s.id==='ineq'?genIneq2(level,n):LOCAL[s.id](level,n);R.status='play';render();return}
+  if(!aiReady||(!activeAI()&&!bankOn())){R.status='needai';render();return}
+  if(!R.go){R.status='idle';render();return}
+  R.phase=bankOn()?'bank':'ai';render();
+  const my=R;genCtl=new AbortController();
+  let fromBank=[];
+  if(bankOn()){try{fromBank=await bankPick(s.id,level,n,genCtl.signal)}catch(e){if(e&&e.name==='AbortError'||e&&e.code==='cancelled')return}}
+  if(R!==my)return;
+  if(fromBank.length>=n||!activeAI()){
+    if(!fromBank.length){R.status=bankOn()&&!activeAI()?'empty':'needai';render();return}
+    R.items=fromBank.slice(0,n);R.note=fromBank.length<n?`คลังมีโจทย์ระดับนี้ที่คุณยังไม่เคยทำแค่ ${fromBank.length} ข้อ ใส่ AI key เพื่อสร้างเพิ่มได้`:'';R.status='play';render();return;
+  }
+  const need=n-fromBank.length;R.phase='ai';R.need=need;R.got=fromBank.length;render();
+  try{
+    const data=await aiJSON(genPrompt(s,level,need),{signal:genCtl.signal,onText:({text})=>{const m=(text.match(/"stem"/g)||[]).length;const el=document.getElementById('genp');if(el)el.textContent=`ได้แล้ว ${Math.min(m,n)} จาก ${n} ข้อ`}});
+    if(R!==my)return;
+    const fresh=shuffle(cleanAI(data)).slice(0,need).map(q=>({...q,src:'ai'}));
+    if(!fresh.length&&!fromBank.length){R.status='error';R.err='ได้โจทย์ที่ใช้ไม่ได้ ลองสร้างชุดใหม่อีกครั้ง';render();return}
+    if(bankOn()&&fresh.length)bankAdd(s.id,level,fresh);
+    R.items=shuffle([...fromBank,...fresh]);R.note='';R.status='play';render();
+  }catch(e){
+    if(R!==my)return;const code=e&&e.code;
+    if(code==='cancelled')return;
+    if(fromBank.length){R.items=fromBank;R.note=`สร้างโจทย์เพิ่มไม่สำเร็จ (${errCopy(code,'สร้างโจทย์')}) จึงใช้จากคลัง ${fromBank.length} ข้อ`;R.status='play';render();return}
+    R.status=HIDE_CODES.includes(code)||code==='no_ai'?'needai':'error';
+    R.err=errCopy(code,'สร้างโจทย์');
+    render();
+  }finally{if(R===my)genCtl=null}
+}
+
+/* ---------- render ---------- */
+function givenHTML(x){return `<div class="given"><span class="k">ถ้า</span><span class="eq">${esc(`${c(x.k,x.X)} > ${x.H} > ${x.M} ≯ ${x.R} + ${x.S}`)} &nbsp;<span class="k">และ</span></span><span></span><span class="eq">${esc(`${x.X} = ${x.Y} > ${x.Q} > ${FR[x.k]}${x.H}`)}</span><span class="note">ทุกตัวอักษรมีค่ามากกว่าศูนย์</span></div>`}
+function mergedHTML(x,hl){
+  const ch=[c(x.k,x.X),c(x.k,x.Y),c(x.k,x.Q),x.H,x.M,`${x.R}+${x.S}`],ops=['=','>','>','>','≯'];
+  const lo=hl?Math.min(...hl):-1,hi=hl?Math.max(...hl):-1;let h='';
+  ch.forEach((v,i)=>{const cls=!hl?'':(hl.includes(i)?' hl':(i>lo&&i<hi?'':' dim'));h+=`<span class="chip${cls}">${esc(v)}</span>`;
+    if(i<ops.length){const oc=!hl?'':(i>=lo&&i<hi?' hl':' dim');h+=`<span class="op${oc}">${esc(ops[i])}</span>`}});
+  return `<div class="row">${h}</div>`}
+function questionHTML(q){
+  if(q.kind==='ineq2'){const L=q.lines;let g=`<div class="given"><span class="k">ถ้า</span>`;L.forEach((l,i)=>{g+=`${i?'<span></span>':''}<span class="eq">${esc(l)}${i<L.length-1?' &nbsp;<span class="k">และ</span>':''}</span>`});g+=`<span class="note">ทุกตัวอักษรมีค่ามากกว่าศูนย์</span></div>`;
+    return g+(q.fmt==='tfu'?`<div class="ask"><div class="lab">ข้อสรุป</div><div class="st">${esc(q.text)}</div></div>`:`<div class="ask"><div class="lab">คำถาม</div><div class="st2">${esc(q.text)}</div></div>`)}
+  if(q.kind==='ineq')return `${givenHTML(q.ctx)}<div class="ask"><div class="lab">ข้อสรุป</div><div class="st">${esc(q.text)}</div></div>`;
+  return `<div class="stem">${esc(q.stem)}</div>`;
+}
+function choicesHTML(q,pick,locked){
+  const mc=!isTFU(q);
+  return `<div class="choices${mc?' mc':''}">${q.choices.map((t,j)=>{
+    let cls='ch';if(locked){if(j===q.answer)cls+=' right';else if(j===pick)cls+=' wrong'}else if(j===pick)cls+=' sel';
+    return `<button class="${cls}" data-j="${j}" ${locked?'disabled':''} aria-pressed="${j===pick}">${mc?`<b>${TH[j]}</b><span>${esc(t)}</span>`:esc(t)}</button>`}).join('')}</div>`;
+}
+function explainHTML(q,pick){
+  const ok=pick===q.answer;
+  let h=`<div class="explain"><p class="verdict ${ok?'good':'bad'}">${pick==null?'ไม่ได้ตอบ':ok?'ถูกต้อง':'ยังไม่ใช่'} · เฉลย ${isTFU(q)?'':TH[q.answer]+'. '}${esc(q.choices[q.answer])}</p>`;
+  if(q.kind==='ineq'){const x=q.ctx;h+=`<p class="lbl">แถวรวม <span class="src">(มาจาก: คูณ ${x.k} ทุกตัวในบรรทัดล่างให้ ${FR[x.k]}${esc(x.H)} เป็น ${esc(x.H)} แล้วต่อกับบรรทัดบนตรง ${esc(x.H)})</span></p>${mergedHTML(x,q.hl)}`}
+  if(q.steps.length)h+=`<ol class="steps">${q.steps.map(([t,s])=>`<li>${esc(t)}${s?` <span class="src">(มาจาก: ${esc(s)})</span>`:''}</li>`).join('')}</ol>`;
+  if(q.src){const st=q.src==='bank'?`โจทย์จากคลัง${q.uses?` · มีคนทำแล้ว ${q.uses} ครั้ง ตอบถูก ${Math.round(q.ok/q.uses*100)}%`:''}`:'โจทย์ใหม่จาก AI'+(q.bid?' · เก็บเข้าคลังแล้ว':'');
+    h+=`<div class="srcrow"><span class="src">${esc(st)}</span>${q.bid?`<button type="button" class="ghost rep" data-bid="${esc(q.bid)}" ${q.reported?'disabled':''}>${q.reported?'แจ้งแล้ว ขอบคุณ':'แจ้งว่าเฉลยผิด'}</button>`:''}</div>`}
+  return h+`</div>`;
+}
+function askHTML(id,q,pick){
+  const ok=pick===q.answer;
+  return `<div class="askbox" id="ab-${id}" ${activeAI()?'':'hidden'}>
+   <p class="lbl">สงสัยตรงไหน ถามแย้งได้เลย</p>
+   <div class="quick">${!ok&&pick!=null?`<button type="button" class="qk" data-q="ทำไมไม่ตอบว่า ${esc(q.choices[pick])}">ทำไมไม่ตอบว่า ${esc(q.choices[pick])}</button>`:''}<button type="button" class="qk" data-q="อธิบายข้อนี้ให้ง่ายกว่านี้อีก">อธิบายให้ง่ายกว่านี้</button></div>
+   <div class="thread"></div>
+   <form class="askform"><label for="ai-${id}" class="lbl">พิมพ์คำถามของคุณ</label><textarea id="ai-${id}" rows="2" placeholder="เช่น ถ้าคิดอีกแบบ ข้อนี้น่าจะตอบอีกข้อไม่ใช่เหรอ"></textarea><div class="askrow"><span class="asknote"></span><button type="button" class="stop" hidden>หยุด</button><button type="submit" class="send">ถาม</button></div></form>
+  </div>`;
+}
+function rulesFor(q,pick){
+  let ctx;
+  if(q.kind==='ineq'){const x=q.ctx;ctx=`โจทย์:\nบรรทัดบน: ${c(x.k,x.X)} > ${x.H} > ${x.M} ≯ ${x.R} + ${x.S}\nบรรทัดล่าง: ${x.X} = ${x.Y} > ${x.Q} > ${FR[x.k]}${x.H}\nทุกตัวอักษรมีค่ามากกว่าศูนย์ (≯ แปลว่า ไม่มากกว่า)\nแถวรวม (คูณ ${x.k} ทุกตัวในบรรทัดล่างแล้วต่อตรง ${x.H}): ${c(x.k,x.X)} = ${c(x.k,x.Y)} > ${c(x.k,x.Q)} > ${x.H} > ${x.M} ≯ ${x.R} + ${x.S}\nข้อสรุปที่ถาม: ${q.text}\nความหมาย: จริง = โจทย์ยืนยันว่าถูก, ไม่จริง = โจทย์ยืนยันว่าผิด, สรุปไม่ได้ = โจทย์ไม่ได้ยืนยันทั้งสองทาง`}
+  else if(q.kind==='ineq2')ctx=`โจทย์ (เงื่อนไขสัญลักษณ์):\n${q.lines.map((l,i)=>`บรรทัดที่ ${i+1}: ${l}`).join('\n')}\nทุกตัวอักษรมีค่ามากกว่าศูนย์ (≯ แปลว่า ไม่มากกว่า, ≮ แปลว่า ไม่น้อยกว่า)\n${q.fmt==='tfu'?`ข้อสรุปที่ถาม: ${q.text}\nความหมาย: จริง = โจทย์ยืนยันว่าถูก, ไม่จริง = โจทย์ยืนยันว่าผิด, สรุปไม่ได้ = โจทย์ไม่ได้ยืนยันทั้งสองทาง`:`คำถาม: ข้อใดสรุปได้ถูกต้องแน่นอน\nตัวเลือก: ${q.choices.map((t,j)=>`${TH[j]}. ${t}`).join(' | ')}`}\nคำตอบถูกตรวจด้วยการคำนวณทางคณิตศาสตร์แล้ว ถูกต้องแน่นอน`;
+  else ctx=`วิชา: ${subj().name}\nโจทย์: ${q.stem}\nตัวเลือก: ${q.choices.map((t,j)=>`${TH[j]}. ${t}`).join(' | ')}`;
+  return `คุณคือติวเตอร์ข้อสอบราชการไทย กำลังช่วยนักเรียนที่เพิ่งตอบข้อนี้
+
+${ctx}
+เฉลยที่ถูกต้อง: ${q.choices[q.answer]}
+เหตุผลในเฉลย: ${q.steps.map(s=>s[0]).join(' / ')}
+นักเรียนตอบว่า: ${pick==null?'ไม่ได้ตอบ':q.choices[pick]}
+
+วิธีตอบ:
+- ตอบเป็นภาษาไทย สั้น กระชับ ไม่เกินประมาณ 8 บรรทัด ภาษาพูดง่ายๆ
+- ห้ามใช้ markdown เช่น ** หรือ # หรือตาราง ถ้าแบ่งขั้นให้ขึ้นบรรทัดใหม่ขึ้นต้นด้วย ① ② ③
+- ห้ามข้ามขั้น ทุกครั้งที่มีค่าหรือพจน์ที่ไม่ได้อยู่ในโจทย์ตรงๆ ต้องบอกว่ามาจากไหน
+- ถ้าเฉลยถูกต้อง และนักเรียนแย้ง ให้ชี้อย่างสุภาพว่าเหตุผลพลาดตรงไหน ถ้าตรวจแล้วพบว่าเฉลยผิดจริง ให้ยอมรับตรงๆ และบอกคำตอบที่ถูก
+- ไม่ต้องแทนตัวเลขสมมติ เว้นแต่นักเรียนขอ
+- ถ้าคำถามไม่เกี่ยวกับข้อนี้ ตอบสั้นๆ แล้วชวนกลับมาที่ข้อนี้`;
+}
+function wireAsk(id,q,pick){
+  const box=document.getElementById('ab-'+id);if(!box||box.dataset.w)return;box.dataset.w='1';
+  const thread=box.querySelector('.thread'),form=box.querySelector('form'),inp=box.querySelector('textarea'),send=box.querySelector('.send'),stop=box.querySelector('.stop'),note=box.querySelector('.asknote');
+  const RULES=rulesFor(q,pick);let turns=[],ctl=null;
+  const bubble=(cls,t)=>{const d=document.createElement('div');d.className='msg '+cls;d.textContent=t;thread.append(d);return d};
+  async function ask(text){
+    text=text.trim();if(!text||!activeAI()||send.disabled)return;
+    note.textContent='';bubble('me',text);turns.push({role:'user',content:text});turns=turns.slice(-10);
+    const b=bubble('ai wait','กำลังคิด...');ctl=new AbortController();send.disabled=true;stop.hidden=false;
+    try{
+      const t=await aiText([{role:'user',content:RULES},...turns],{signal:ctl.signal,onText:({text})=>{b.classList.remove('wait');b.textContent=text}});
+      b.classList.remove('wait');b.textContent=t;turns.push({role:'assistant',content:t});
+    }catch(e){
+      b.classList.remove('wait');if(e&&e.text)b.textContent=e.text;else b.remove();
+      const code=e&&e.code;
+      if(HIDE_CODES.includes(code)||code==='no_ai'){box.hidden=true;return}
+      note.textContent=code==='cancelled'?'':errCopy(code,'ถาม');
+    }finally{send.disabled=false;stop.hidden=true}
+  }
+  form.onsubmit=e=>{e.preventDefault();const t=inp.value;inp.value='';ask(t)};
+  inp.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();form.requestSubmit()}};
+  stop.onclick=()=>ctl&&ctl.abort();
+  box.querySelectorAll('.qk').forEach(k=>k.onclick=()=>ask(k.dataset.q));
+}
+
+function renderSide(){
+  document.getElementById('subjects').innerHTML=SUBJ.map(s=>`<button class="subj" data-s="${s.id}" aria-current="${s.id===P.subject}"><span>${esc(s.name)}</span><span class="lv">ระดับ ${lvOf(s.id)}</span></button>`).join('');
+  document.querySelectorAll('.subj').forEach(b=>b.onclick=()=>{P.subject=b.dataset.s;save();renderSide();start(true)});
+  document.getElementById('count').value=String(P.count);
+  document.getElementById('mode-now').setAttribute('aria-pressed',P.mode==='now');
+  document.getElementById('mode-end').setAttribute('aria-pressed',P.mode==='end');
+  const s=subj();document.getElementById('title').textContent=s.name;document.getElementById('desc').textContent=`${s.desc} · ระดับ ${lvOf(s.id)} จาก 5`;
+}
+function render(){
+  renderSide();
+  const el=document.getElementById('sheet');if(!R)return;
+  if(R.status==='loading'){el.innerHTML=`<div class="state"><div class="spin" aria-hidden="true"></div><p><b>${R.phase==='bank'?`กำลังดึงโจทย์จากคลัง ระดับ ${R.level}`:R.got?`คลังมี ${R.got} ข้อ กำลังให้ AI สร้างเพิ่มอีก ${R.need} ข้อ`:`กำลังให้ AI สร้างโจทย์ใหม่ ระดับ ${R.level}`}</b></p><p class="src" id="genp">${R.phase==='bank'?'สักครู่':'ใช้เวลาประมาณครึ่งนาทีถึงหนึ่งนาที'}</p><button class="ghost" id="cancelgen">ยกเลิก</button></div>`;document.getElementById('cancelgen').onclick=()=>{genCtl&&genCtl.abort();R.status='error';R.err='ยกเลิกแล้ว กดสร้างชุดใหม่เมื่อพร้อม';render()};return}
+  if(R.status==='idle'){el.innerHTML=`<div class="state"><p><b>พร้อมสร้างโจทย์ชุดใหม่ ระดับ ${R.level}</b></p><p class="src">${bankOn()?`ระบบจะดึงโจทย์ที่คนอื่นเคยให้ AI สร้างไว้จากคลังก่อน${activeAI()?` ถ้าไม่พอ ${AINAME[activeAI()]} จะสร้างเพิ่มและเก็บเข้าคลังให้คนถัดไป`:' (ยังไม่ได้ใส่ AI key จึงใช้ได้เฉพาะโจทย์ที่มีในคลัง)'}`:`AI จะสร้างโจทย์ ${P.count} ข้อตามระดับของคุณ ใช้ ${AINAME[activeAI()]||'AI'} จากบัญชีของคุณ`}</p><button class="primary" id="go">สร้างโจทย์</button></div>`;document.getElementById('go').onclick=()=>start(true);return}
+  if(R.status==='empty'){el.innerHTML=`<div class="state"><p><b>คลังยังไม่มีโจทย์ระดับ ${R.level} ที่คุณยังไม่เคยทำ</b></p><p class="src">ใส่ Gemini หรือ OpenAI key ในเมนู ตั้งค่า AI เพื่อสร้างโจทย์ใหม่ โจทย์ที่สร้างจะเก็บเข้าคลังให้คนอื่นใช้ต่อ</p><button class="primary" id="retry">เปิดตั้งค่า AI</button></div>`;document.getElementById('retry').onclick=()=>{const d=document.getElementById('aiset');d.open=true;d.scrollIntoView({block:'nearest'})};return}
+  if(R.status==='needai'){el.innerHTML=`<div class="state"><p><b>${aiReady?'วิชานี้ต้องใช้ AI สร้างโจทย์':'กำลังเชื่อมต่อ AI...'}</b></p><p class="src">${aiReady?(inViewer?'หน้านี้ยังใช้ Claude ไม่ได้ ลองกดอีกครั้งแล้วกดอนุญาต ส่วนอีก 4 วิชาระบบสร้างโจทย์เองได้':'ใส่ API key ของ Gemini หรือ OpenAI ในเมนู ตั้งค่า AI ด้านซ้ายก่อน ส่วนอีก 4 วิชาระบบสร้างโจทย์เองได้โดยไม่ต้องใช้ AI'):''}</p>${aiReady?'<button class="primary" id="retry">ลองอีกครั้ง</button>':''}</div>`;const r=document.getElementById('retry');if(r)r.onclick=()=>{if(!inViewer&&!activeAI()){const d=document.getElementById('aiset');d.open=true;d.scrollIntoView({block:'nearest'});return}start(true)};return}
+  if(R.status==='error'){el.innerHTML=`<div class="state"><p><b>${esc(R.err||'เกิดข้อผิดพลาด')}</b></p><button class="primary" id="retry">สร้างชุดใหม่</button></div>`;document.getElementById('retry').onclick=()=>start(true);return}
+  if(R.status==='done'){renderDone(el);return}
+  const n=R.items.length,q=R.items[R.i],pick=R.picks[R.i],locked=R.mode==='now'&&pick!=null;
+  const done=R.picks.filter((p,j)=>p!=null&&p===R.items[j].answer).length;
+  el.innerHTML=fx(`<div class="meta"><span>ข้อ ${R.i+1} จาก ${n}</span><span>${R.mode==='now'?`ถูก ${done}`:`ตอบแล้ว ${R.picks.filter(p=>p!=null).length}`}</span></div>
+   <div class="bar"><i style="width:${R.i/n*100}%"></i></div>
+   ${R.note&&R.i===0?`<div class="notebar">${esc(R.note)}</div>`:''}
+   ${questionHTML(q)}
+   ${choicesHTML(q,pick,locked)}
+   ${locked?explainHTML(q,pick)+askHTML('cur',q,pick):''}
+   <div class="navrow"><span class="src">${R.mode==='end'?'เฉลยทั้งหมดจะแสดงตอนท้าย':''}</span><button class="primary" id="next" ${pick==null?'disabled':''}>${R.i+1<n?'ข้อต่อไป':'ส่งคำตอบ'}</button></div>`);
+  el.querySelectorAll('.ch').forEach(b=>b.onclick=()=>{R.picks[R.i]=+b.dataset.j;render();const nb=document.getElementById('next');if(nb&&R.mode==='now')nb.focus({preventScroll:true})});
+  if(locked)wireAsk('cur',q,pick);
+  document.getElementById('next').onclick=()=>{if(R.i+1<n){R.i++;render();el.scrollIntoView({block:'start',behavior:'smooth'})}else finish()};
+}
+function finish(){
+  bankRecord(R.items,R.picks);
+  const n=R.items.length,score=R.items.filter((q,j)=>R.picks[j]===q.answer).length,pct=n?score/n:0;
+  const before=R.level;let after=before;if(pct>=.8)after=Math.min(5,before+1);else if(pct<.5)after=Math.max(1,before-1);
+  P.levels[R.subject]=after;
+  const wrong=R.items.filter((q,j)=>R.picks[j]!==q.answer).map(q=>qLabel(q).replace(/\s+/g,' ').slice(0,90));
+  P.weak[R.subject]=[...(P.weak[R.subject]||[]),...wrong].slice(-5);if(!wrong.length)P.weak[R.subject]=[];
+  save();Object.assign(R,{status:'done',score,pct,after});render();
+}
+function verdict(p){
+  if(p===1)return{s:'🏆',c:'good',t:'เต็ม! สุดยอดมาก',m:'ทำถูกครบทุกข้อ ความแม่นระดับนี้พร้อมลงสนามจริงแล้ว รอบหน้าระบบจะเพิ่มความยาก เตรียมตัวให้ดี'};
+  if(p>=.8)return{s:'🎉',c:'good',t:'เก่งมาก ผ่านเกณฑ์',m:'ถูกเกิน 80% แล้ว รักษามาตรฐานนี้ไว้ รอบหน้าจะยากขึ้นอีกขั้น'};
+  if(p>=.6)return{s:'💪',c:'mid',t:'ใช้ได้ แต่ยังไม่พอ',m:'อีกนิดเดียวก็ถึง 80% อ่านเฉลยข้อที่พลาดให้เข้าใจ แล้วลุยรอบใหม่'};
+  if(p>=.4)return{s:'😤',c:'mid',t:'ยังพลาดเยอะไปนะ',m:'ถ้าในห้องสอบจริงได้แบบนี้ถือว่าเสี่ยงมาก อย่ารีบเดา ทวนเฉลยข้อที่ผิดทุกข้อก่อนทำรอบต่อไป'};
+  return{s:'😱',c:'bad',t:'แบบนี้ไม่ผ่านแน่ ต้องทบทวนด่วน',m:'คะแนนต่ำกว่าครึ่งมาก ตั้งใจกว่านี้อีก รอบหน้าระบบจะลดความยากลงให้ปูพื้นฐานใหม่ อ่านเฉลยทีละข้ออย่างช้าๆ'};
+}
+function renderDone(el){
+  const n=R.items.length,v=verdict(R.pct);
+  const lvTxt=R.after>R.level?`รอบหน้าขึ้นเป็นระดับ ${R.after}`:R.after<R.level?`รอบหน้าลดเป็นระดับ ${R.after}`:`รอบหน้ายังอยู่ระดับ ${R.after}`;
+  el.innerHTML=fx(`<div class="result">
+    <div class="sticker ${v.c}" role="img" aria-label="${esc(v.t)}">${v.s}</div>
+    <p class="big">${R.score} / ${n}</p>
+    <p class="msgt">${esc(v.t)}</p>
+    <p style="margin:0;max-width:46ch">${esc(v.m)}</p>
+    <span class="lvchg">${esc(lvTxt)}</span>
+    <button class="primary" id="again">ทำชุดใหม่</button>
+    <div class="review">
+     <p class="lbl">ทบทวนรายข้อ (กดเพื่อดูเฉลยและถามต่อ)</p>
+     ${R.items.map((q,j)=>{const p=R.picks[j],ok=p===q.answer;return `<details data-j="${j}"><summary><span>ข้อ ${j+1}: ${esc(qLabel(q))}</span><span class="${ok?'o':'x'}">${ok?'ถูก':'ผิด'}</span></summary><div class="body">${questionHTML(q)}${choicesHTML(q,p,true)}${explainHTML(q,p)}${askHTML('r'+j,q,p)}</div></details>`}).join('')}
+    </div></div>`);
+  document.getElementById('again').onclick=()=>start(true);
+  el.querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){const j=+d.dataset.j;wireAsk('r'+j,R.items[j],R.picks[j])}}));
+  const first=R.items.findIndex((q,j)=>R.picks[j]!==q.answer);
+  if(first>=0&&R.mode==='end')el.querySelector(`details[data-j="${first}"]`).open=true;
+}
+
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.rep');if(!b||b.disabled)return;const bid=b.dataset.bid;
+  const q=R&&R.items.find(x=>x.bid===bid);if(q)q.reported=true;b.disabled=true;b.textContent='แจ้งแล้ว ขอบคุณ';
+  if(bankOn())bankRPC('report_question',{p_id:bid}).catch(()=>{})});
+document.getElementById('count').onchange=e=>{P.count=+e.target.value;save()};
+document.getElementById('mode-now').onclick=()=>{P.mode='now';save();renderSide()};
+document.getElementById('mode-end').onclick=()=>{P.mode='end';save();renderSide()};
+document.getElementById('newset').onclick=()=>start(true);
+document.getElementById('resetlv').onclick=()=>{P.levels[P.subject]=1;P.weak[P.subject]=[];save();start(true)};
+renderSide();
+start();
+</script>
+</body></html>
